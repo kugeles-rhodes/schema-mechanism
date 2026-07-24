@@ -15,10 +15,10 @@ setup(
         'anytree==2.8.0',
         'lark==1.1.1',
         'numpy==1.21.4',
-        'pynput==1.7.6'
+        'pynput==1.7.6',
         'pyyaml==6.0',
-        'scikit-learn==1.0.1',
-        'scipy==1.7.3',
+        'scikit-learn==1.6.1',
+        'scipy==1.8.0',
         'optuna==2.10.1',
         'pandas==1.4.2',
     ],
