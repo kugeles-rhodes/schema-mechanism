@@ -4,6 +4,7 @@ import logging
 import logging.config
 import os
 import subprocess
+import sys
 from pathlib import Path
 from time import time
 from typing import Iterable
@@ -12,12 +13,8 @@ from typing import Protocol
 
 logger = logging.getLogger('scripts')
 
-PYTHON_EXEC = 'venv/Scripts/python'
+PYTHON_EXEC = sys.executable
 SCRIPT = 'src/examples/multi_arm_bandits.py'
-
-SOURCE_DIRS = [
-    'src',
-]
 
 EXPERIMENT_UID = str(int(time()))
 OUTPUT_DIR = Path(os.path.join('local/experiments', EXPERIMENT_UID))
@@ -127,9 +124,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def config_env() -> None:
-    # setup environment variables
-    os.environ['PYTHONPATH'] = os.pathsep.join([os.environ['PYTHONPATH'], *SOURCE_DIRS])
-
     # create output subdirectory
     if not OUTPUT_DIR.exists():
         OUTPUT_DIR.mkdir()
