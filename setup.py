@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import find_packages
+from setuptools import setup
 
 setup(
     name='SchemaMechanism',
@@ -11,6 +12,8 @@ setup(
     url='https://github.com/skugele/schema-mechanism',
     license='MIT',
     python_requires='>=3.9',
+    package_dir={'': 'src'},
+    packages=find_packages(where='src'),
     install_requires=[
         'anytree==2.8.0',
         'lark==1.1.1',
