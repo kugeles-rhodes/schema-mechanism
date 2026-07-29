@@ -161,6 +161,12 @@ class BanditEnvironment(Environment):
         return False
 
     def step(self, action: Action) -> tuple[State, bool]:
+        """ Updates the environment based on the given action.
+
+        :param action: an Action to execute against this environment
+
+        :return: a tuple containing the updated State, and a bool that indicates if current state is terminal
+        """
         if action not in self._actions:
             raise ValueError(f'Invalid action: {action}')
 
