@@ -134,3 +134,6 @@ dmypy.json
 # Local Only Files
 local/
 .run/
+
+# other
+.pdf
