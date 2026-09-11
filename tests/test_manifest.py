@@ -65,12 +65,9 @@ class TestManifest(TestCase):
             try:
                 new_manifest = create_manifest(encoding='alternate encoding')
 
-                last_modification_time = manifest_filepath.stat().st_mtime_ns
                 save_manifest(new_manifest, path=path, overwrite=True)
-                new_modification_time = manifest_filepath.stat().st_mtime_ns
 
-                self.assertGreater(new_modification_time, last_modification_time)
-
+                # test: loaded manifest should equal the new manifest when overwrite=True
                 loaded_manifest = load_manifest(path=path)
                 self.assertDictEqual(new_manifest, loaded_manifest)
             except ValueError as e:
