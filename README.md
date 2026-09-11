@@ -14,24 +14,64 @@ place of Drescher's habituation/hysteresis scheme.
 
 ### Requirements
 
-- **Python 3.9** is required. 
+- **Python 3.9** is required (3.10 and later will not work).
+- macOS, Linux, and Windows are all supported. There are no compiled components in this project, and every pinned
+  dependency ships prebuilt wheels for Python 3.9 on all three platforms.
 
 ### Setting up a virtual environment
 
-Using `pyenv` to install the required Python version and create a virtual environment:
+**macOS and Linux** — using `pyenv` to install the required Python version, then creating the virtual environment
+in the project root:
 
 ```bash
 pyenv install -s 3.9.23
 ~/.pyenv/versions/3.9.23/bin/python3.9 -m venv venv
 ```
 
-### Installing dependencies
+**Windows** — install Python 3.9 from [python.org](https://www.python.org/downloads/release/python-3913/) (or with
+`pyenv-win`), then use the `py` launcher to select it:
 
-Dependencies are pinned in `requirements.txt`. With the virtual environment created above:
+```powershell
+py -3.9 -m venv venv
+```
+
+### Activating the virtual environment
+
+From the project root, on macOS or Linux (`bash`/`zsh`):
 
 ```bash
-venv/bin/pip install -r requirements.txt
-venv/bin/pip install -e .
+source venv/bin/activate
+```
+
+On Windows, the activation script lives under `venv\Scripts` instead:
+
+```bat
+venv\Scripts\activate.bat
+```
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
+If PowerShell refuses to run `Activate.ps1` because of its execution policy, either use the `activate.bat` form
+above or allow local scripts for the current user with
+`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+
+Once activated, `python` and `pip` resolve to the virtual environment's copies on every platform, and `deactivate`
+restores the original shell environment.
+
+**Every command in the rest of this README assumes an activated virtual environment.** To run one without
+activating, prefix it with `venv/bin/` on macOS and Linux, or `venv\Scripts\` on Windows. For example,
+`python -m unittest discover -s tests -v` becomes `venv/bin/python -m unittest discover -s tests -v` or
+`venv\Scripts\python -m unittest discover -s tests -v`.
+
+### Installing dependencies
+
+Dependencies are pinned in `requirements.txt`. Activate the virtual environment created above, then install:
+
+```bash
+pip install -r requirements.txt
+pip install -e .
 ```
 
 The `pip install -e .` step performs an editable install of this project (configured via `setup.py`), which puts the
@@ -42,13 +82,13 @@ The `pip install -e .` step performs an editable install of this project (config
 Tests use Python's built-in `unittest` framework and live under `tests/`:
 
 ```bash
-venv/bin/python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 A single test module or test case can be run directly, e.g.:
 
 ```bash
-venv/bin/python -m unittest tests.test_schema -v
+python -m unittest tests.test_schema -v
 ```
 
 ## Running the Multi-Armed Bandit example
@@ -58,11 +98,11 @@ two ways to run it.
 
 ### Single run
 
-Run the example directly from the project root (it loads `config/logging.conf` via a relative path, so it won't
-find that file if run from elsewhere):
+Run the example from the project root on any platform (it loads `config/logging.conf` via a relative path, so it
+won't find that file if run from elsewhere):
 
 ```bash
-venv/bin/python src/examples/multi_arm_bandits.py
+python src/examples/multi_arm_bandits.py
 ```
 
 This builds a bandit environment with 16 machines with random win probabilities and runs one 500-step episode by
@@ -82,8 +122,23 @@ default. Useful options:
 Example:
 
 ```bash
-venv/bin/python src/examples/multi_arm_bandits.py -M 1.0 -M 0.5 -M 0.0 --steps 5000
+python src/examples/multi_arm_bandits.py -M 1.0 -M 0.5 -M 0.0 --steps 5000
 ```
+
+### Interactive controls
+
+While an example is running, `pynput` listens for global key presses: space pauses and resumes the run, and `Esc`
+requests a stop. This listener needs OS-level input access, which differs by platform:
+
+- **macOS** — grant the terminal application Accessibility and Input Monitoring permission under System Settings >
+  Privacy & Security. Without it, the pause and stop keys have no effect, and `pynput` may log a warning that the
+  process is not trusted.
+- **Linux** — an X11 display is required, so `DISPLAY` must be set. Under a headless session or a strict Wayland
+  compositor, the pause and stop keys have no effect.
+- **Windows** — no additional configuration is required.
+
+The run itself proceeds normally on all three platforms whether or not the listener can read key presses; only the
+pause and stop keys are affected.
 
 ### Experiment sweep
 
@@ -91,8 +146,11 @@ venv/bin/python src/examples/multi_arm_bandits.py -M 1.0 -M 0.5 -M 0.0 --steps 5
 above as a subprocess multiple times per configuration, and writes results under `local/experiments/<timestamp>/`:
 
 ```bash
-venv/bin/python scripts/run_bandit_experiment.py --steps_per_run 10000 --runs_per_trial 10
+python scripts/run_bandit_experiment.py --steps_per_run 10000 --runs_per_trial 10
 ```
+
+Subprocesses are launched with the same interpreter that runs the script, so the sweep works identically on macOS,
+Linux, and Windows.
 
 Use this over a single run when you want aggregate results across several bandit configurations and repeated trials
 rather than watching one run's behavior directly.
