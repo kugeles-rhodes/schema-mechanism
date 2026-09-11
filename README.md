@@ -51,6 +51,52 @@ A single test module or test case can be run directly, e.g.:
 venv/bin/python -m unittest tests.test_schema -v
 ```
 
+## Running the Multi-Armed Bandit example
+
+`src/examples/multi_arm_bandits.py` runs the schema mechanism against a multi-armed bandit environment. There are
+two ways to run it.
+
+### Single run
+
+Run the example directly from the project root (it loads `config/logging.conf` via a relative path, so it won't
+find that file if run from elsewhere):
+
+```bash
+venv/bin/python src/examples/multi_arm_bandits.py
+```
+
+This builds a bandit environment with 16 machines with random win probabilities and runs one 500-step episode by
+default. Useful options:
+
+| Flag | Purpose |
+|---|---|
+| `--n_machines N` | number of bandit machines with random win probabilities (default 16) |
+| `-M P` (repeatable) | define a specific machine with win probability `P`, e.g. `-M 0.75 -M 0.25`; overrides `--n_machines`/randomization |
+| `--steps N` | time steps per episode (default 500) |
+| `--episodes N` | number of episodes (default 1) |
+| `--greedy` | use a greedy (exploit-only) schema selection strategy instead of the default epsilon-greedy strategy |
+| `--save_path FILE` / `--save_frequency N` | periodically checkpoint the learned schema mechanism |
+| `--load_path FILE` | resume from a previously saved schema mechanism instead of starting fresh |
+| `--optimize` | run an Optuna hyperparameter-optimization study instead of a normal episode (see `--optimizer_*` flags for study configuration) |
+
+Example:
+
+```bash
+venv/bin/python src/examples/multi_arm_bandits.py -M 1.0 -M 0.5 -M 0.0 --steps 5000
+```
+
+### Experiment sweep
+
+`scripts/run_bandit_experiment.py` sweeps a range of machine-count configurations, running the single-run script
+above as a subprocess multiple times per configuration, and writes results under `local/experiments/<timestamp>/`:
+
+```bash
+venv/bin/python scripts/run_bandit_experiment.py --steps_per_run 10000 --runs_per_trial 10
+```
+
+Use this over a single run when you want aggregate results across several bandit configurations and repeated trials
+rather than watching one run's behavior directly.
+
 ## References:
 
 Drescher, G. L. (1987). A Mechanism for Early Piagetian Learning. In AAAI (pp. 290-294).
