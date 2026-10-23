@@ -315,7 +315,7 @@ def get_agent_observation(world: WumpusWorld, agent: WumpusWorldAgent, wumpus: W
     # objects/entities in front of agent
     for obj in world.cells[pos_in_front_of(agent)]:
         if obj != '.':
-            state_elements.append(f'IN_CELL_WITH_AGENT={obj}')
+            state_elements.append(f'IN_FRONT_OF_AGENT={obj}')
 
     # other events
     ##############
