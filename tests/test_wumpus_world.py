@@ -22,11 +22,10 @@ from examples.environments.wumpus_world import WumpusWorldMdp
 
 class TestWumpusWorld(unittest.TestCase):
     # Grid indexing is (row, column). The exit at (1, 2) has a wall east of it.
-    WORLD_MAP = 'wwwww\nw.eww\nw...w\nwwwww'  # Class attribute, like a static field
-    #wwwww
-    #w.eww
-    #w...w
-    #wwwww
+    WORLD_MAP = """wwwww
+                   w.eww
+                   w...w
+                   wwwww"""  # Class attribute, like a static field
 
     def make_env(self, position=(1, 1), direction='E') -> WumpusWorldMdp:
         env = WumpusWorldMdp(
@@ -39,7 +38,7 @@ class TestWumpusWorld(unittest.TestCase):
         return env
 
     def test_right_turn_changes_direction_not_position(self):
-        env = self.make_env()
+        env = self.make_env(position=(1, 1), direction='E')
         state, terminal = env.step(TURN_RIGHT)
 
         self.assertEqual(env.agent.position, (1, 1))
@@ -48,7 +47,7 @@ class TestWumpusWorld(unittest.TestCase):
         self.assertFalse(terminal)
 
     def test_forward_move_into_free_cell(self):
-        env = self.make_env(direction='S')
+        env = self.make_env(position=(1, 1), direction='S')
 
         _, terminal = env.step(MOVE_FORWARD)
 
@@ -56,21 +55,21 @@ class TestWumpusWorld(unittest.TestCase):
         self.assertFalse(terminal)
 
     def test_wall_blocks_forward_move(self):
-        env = self.make_env(position=(1, 2))
+        env = self.make_env(position=(1, 2), direction='E')
         env.step(MOVE_FORWARD)
 
         self.assertEqual(env.agent.position, (1, 2))
         self.assertEqual(env.env.cells[env.agent.position], 'e')
 
     def test_facing_exit_does_not_escape(self):
-        env = self.make_env()
+        env = self.make_env(position=(1, 1), direction='E')
         _, terminal = env.step(USE_EXIT)
 
         self.assertFalse(env.agent.has_escaped)
         self.assertFalse(terminal)
 
     def test_using_exit_terminates_and_rejects_further_steps(self):
-        env = self.make_env(position=(1, 2))
+        env = self.make_env(position=(1, 2), direction='E')
         state, terminal = env.step(USE_EXIT)
 
         self.assertTrue(terminal)
@@ -79,7 +78,7 @@ class TestWumpusWorld(unittest.TestCase):
             env.step(TURN_RIGHT)
 
     def test_reset_restores_agent_after_escape(self):
-        env = self.make_env(position=(1, 2))
+        env = self.make_env(position=(1, 2), direction='E')
         env.step(USE_EXIT)
         _, terminal = env.reset()
 
@@ -89,7 +88,7 @@ class TestWumpusWorld(unittest.TestCase):
 
     def test_observation_distinguishes_current_and_forward_cells(self):
         #Arrange
-        env = self.make_env(position=(1, 2))
+        env = self.make_env(position=(1, 2), direction='E')
 
         #Act
         observation = get_agent_observation(env.env, env.agent, env.wumpus) # No Wumpus in the test
