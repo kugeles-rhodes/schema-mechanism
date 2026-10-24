@@ -14,25 +14,28 @@ place of Drescher's habituation/hysteresis scheme.
 
 ### Requirements
 
-- **Python 3.9** is required (3.10 and later will not work).
+- **Python 3.12 or later** is required. Python 3.12, 3.13, and 3.14 are tested in CI; 3.13 is recommended for
+  development.
 - macOS, Linux, and Windows are all supported. There are no compiled components in this project, and every pinned
-  dependency ships prebuilt wheels for Python 3.9 on all three platforms.
+  dependency ships prebuilt wheels for all three platforms, with one exception: on Linux, the keyboard-input library
+  (`pynput`) depends on `evdev`, which is built from source during installation and needs a C compiler (e.g. the
+  `build-essential` package on Debian/Ubuntu).
 
 ### Setting up a virtual environment
 
-**macOS and Linux** — using `pyenv` to install the required Python version, then creating the virtual environment
+**macOS and Linux** — using `pyenv` to install the recommended Python version, then creating the virtual environment
 in the project root:
 
 ```bash
-pyenv install -s 3.9.23
-~/.pyenv/versions/3.9.23/bin/python3.9 -m venv venv
+pyenv install -s 3.13.7
+~/.pyenv/versions/3.13.7/bin/python3.13 -m venv venv
 ```
 
-**Windows** — install Python 3.9 from [python.org](https://www.python.org/downloads/release/python-3913/) (or with
-`pyenv-win`), then use the `py` launcher to select it:
+**Windows** — install Python 3.13 from [python.org](https://www.python.org/downloads/) (or with `pyenv-win`), then use
+the `py` launcher to select it:
 
 ```powershell
-py -3.9 -m venv venv
+py -3.13 -m venv venv
 ```
 
 ### Activating the virtual environment
@@ -67,7 +70,9 @@ activating, prefix it with `venv/bin/` on macOS and Linux, or `venv\Scripts\` on
 
 ### Installing dependencies
 
-Dependencies are pinned in `requirements.txt`. Activate the virtual environment created above, then install:
+`requirements.txt` pins the exact versions of every dependency (including transitive ones) that the project is tested
+with, while `setup.py` declares the compatible version ranges. Activate the virtual environment created above, then
+install:
 
 ```bash
 pip install -r requirements.txt

@@ -1,7 +1,7 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
-from collections import Sequence
+from collections.abc import Sequence
 from typing import Optional
 from typing import Protocol
 from typing import runtime_checkable

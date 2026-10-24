@@ -1,7 +1,7 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
-from collections import Iterable
+from collections.abc import Iterable
 from typing import Any
 from typing import Optional
 

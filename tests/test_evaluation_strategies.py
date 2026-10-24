@@ -1103,10 +1103,10 @@ class TestHabituationEvaluationStrategy(TestCommon):
         self.assertEqual(np.zeros(1), values[5])
 
         # test: actions with trace values below median should have positive value
-        self.assertTrue(np.alltrue(values[:5] > 0.0))
+        self.assertTrue(np.all(values[:5] > 0.0))
 
         # test: actions with trace values above median should have negative value
-        self.assertTrue(np.alltrue(values[6:] < 0.0))
+        self.assertTrue(np.all(values[6:] < 0.0))
 
     def test_multiple_actions_different_values_does_not_contain_median(self):
         values = self.strategy.values(schemas=self.schemas[1:])
@@ -1115,10 +1115,10 @@ class TestHabituationEvaluationStrategy(TestCommon):
         self.assertTrue(np.median(values) not in values)
 
         # test: actions with trace values below median should have positive value
-        self.assertTrue(np.alltrue(values[:5] > 0.0))
+        self.assertTrue(np.all(values[:5] > 0.0))
 
         # test: actions with trace values above median should have negative value
-        self.assertTrue(np.alltrue(values[5:] < 0.0))
+        self.assertTrue(np.all(values[5:] < 0.0))
 
     def test_unknown_values(self):
         # test: schemas with unknown actions should raise ValueError
