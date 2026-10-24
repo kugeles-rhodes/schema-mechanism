@@ -84,12 +84,12 @@ class TestCommon(TestCase):
         values = self.ONES
         for _ in range(100_000_000):
             # terminate early if decay reaches limit
-            if np.alltrue(values <= termination_values):
+            if np.all(values <= termination_values):
                 break
 
             values = strategy.decay(values=values)
 
-        self.assertTrue(np.alltrue(values <= termination_values))
+        self.assertTrue(np.all(values <= termination_values))
 
     def assert_all_common_functionality(self, strategy: DecayStrategy) -> None:
         self.assert_implements_decay_strategy_interface(strategy)

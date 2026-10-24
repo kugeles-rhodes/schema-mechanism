@@ -7,8 +7,8 @@ import random
 from abc import ABC
 from abc import ABCMeta
 from abc import abstractmethod
-from collections import Collection
 from collections import defaultdict
+from collections.abc import Collection
 from collections.abc import Iterable
 from itertools import tee
 from pathlib import Path
@@ -161,12 +161,12 @@ class AssociativeArrayList(Generic[T]):
     def __contains__(self, item: T) -> bool:
         return item in self._indexes
 
-    def __getitem__(self, key: T) -> np.ndarray:
+    def __getitem__(self, key: T) -> np.float64:
         if key not in self._indexes:
             self.add([key])
 
         index = self._indexes[key]
-        return np.array([self._values[index]])
+        return self._values[index]
 
     def __setitem__(self, key: T, value: float) -> None:
         if key not in self._indexes:

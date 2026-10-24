@@ -625,7 +625,7 @@ class TestSchema(TestCase):
 
     def test_reliability_0(self):
         # reliability before update should be NAN
-        self.assertIs(np.NAN, self.schema.reliability)
+        self.assertIs(np.nan, self.schema.reliability)
 
     def test_reliability_1(self):
         # success update
@@ -693,7 +693,7 @@ class TestSchema(TestCase):
                       s_prev=sym_state('0,1'),
                       s_curr=sym_state('2,3,5'),
                       count=1)
-        self.assertIs(np.NAN, self.schema.reliability)
+        self.assertIs(np.nan, self.schema.reliability)
 
         # success update WITHOUT activation
         update_schema(self.schema,
@@ -702,7 +702,7 @@ class TestSchema(TestCase):
                       s_prev=sym_state('0,1'),
                       s_curr=sym_state('2,3,4,5'),
                       count=1)
-        self.assertIs(np.NAN, self.schema.reliability)
+        self.assertIs(np.nan, self.schema.reliability)
 
         # failure update WITHOUT activation
         update_schema(self.schema,
@@ -711,7 +711,7 @@ class TestSchema(TestCase):
                       s_prev=sym_state('0,1'),
                       s_curr=sym_state('2,3,5'),
                       count=1)
-        self.assertIs(np.NAN, self.schema.reliability)
+        self.assertIs(np.nan, self.schema.reliability)
 
         # success update WITHOUT activation
         update_schema(self.schema,
@@ -720,7 +720,7 @@ class TestSchema(TestCase):
                       s_prev=sym_state('0,1'),
                       s_curr=sym_state('2,3,4,5'),
                       count=1)
-        self.assertIs(np.NAN, self.schema.reliability)
+        self.assertIs(np.nan, self.schema.reliability)
 
         # success update WITH activation
         update_schema(self.schema,

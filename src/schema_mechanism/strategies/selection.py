@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections import Sequence
+from collections.abc import Sequence
 from typing import Protocol
 from typing import runtime_checkable
 

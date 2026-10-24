@@ -81,7 +81,7 @@ class WumpusWorldAgent:
     @property
     def as_array(self) -> np.ndarray:
         return np.array([self.position[0], self.position[1], direction_as_int(self.direction),
-                         self.health, self.arrows, self.gold], dtype=np.int)
+                         self.health, self.arrows, self.gold], dtype=int)
 
     def __repr__(self) -> str:
         return str(self)
@@ -104,7 +104,7 @@ class Wumpus:
 
     @property
     def as_array(self) -> np.ndarray:
-        return np.array([self.position[0], self.position[1], self.health], dtype=np.int)
+        return np.array([self.position[0], self.position[1], self.health], dtype=int)
 
     def __repr__(self) -> str:
         return str(self)

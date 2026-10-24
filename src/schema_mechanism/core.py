@@ -698,7 +698,7 @@ class ECItemStats(ItemStats):
         try:
             return self.n_off / self.n
         except ZeroDivisionError:
-            return np.NAN
+            return np.nan
 
     def as_table(self) -> CorrelationTable:
         return self.n_success_and_on, self.n_fail_and_on, self.n_success_and_off, self.n_fail_and_off
@@ -1821,7 +1821,7 @@ class Schema(Observer, Observable, UniqueIdMixin):
         :return: the schema's reliability
         """
         return (
-            np.NAN if self.is_bare() or self.stats.n_activated == 0
+            np.nan if self.is_bare() or self.stats.n_activated == 0
             else self.stats.n_success / self.stats.n_activated
         )
 
@@ -2068,7 +2068,7 @@ class ReadOnlySchemaPool(SchemaPool):
 def is_reliable(schema: Schema, threshold: Optional[float] = None) -> bool:
     params = get_global_params()
     threshold = threshold or params.get('schema.reliability_threshold')
-    return schema.reliability != np.NAN and schema.reliability >= threshold
+    return schema.reliability != np.nan and schema.reliability >= threshold
 
 
 class SchemaSearchCollection(ABC, Collection):
