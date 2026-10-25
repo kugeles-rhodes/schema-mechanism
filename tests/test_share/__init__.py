@@ -1,5 +1,5 @@
 import logging
-from collections import Callable
+from collections.abc import Callable
 
 SUPPRESS_PERFORMANCE = True
 SUPPRESS_STRING_OUTPUT = True

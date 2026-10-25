@@ -412,7 +412,7 @@ def parse_optimizer_args(parser: argparse.ArgumentParser) -> argparse.ArgumentPa
         '--optimizer_sampler',
         type=str,
         default=DEFAULT_OPTIMIZER_SAMPLER,
-        choices=['random', 'tpe', 'skopt'],
+        choices=['random', 'tpe'],
         help=f'sampler to use when optimizing hyper-parameters (default: {DEFAULT_OPTIMIZER_SAMPLER})'
     )
     parser.add_argument(

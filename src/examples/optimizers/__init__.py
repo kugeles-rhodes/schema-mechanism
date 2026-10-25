@@ -11,7 +11,6 @@ from typing import Optional
 import numpy as np
 import optuna
 from optuna import Trial
-from optuna.integration import SkoptSampler
 from optuna.pruners import MedianPruner
 from optuna.pruners import SuccessiveHalvingPruner
 from optuna.samplers import RandomSampler
@@ -57,7 +56,7 @@ def get_optimizer_report_filename(
 
 
 def sample_global_params(trial: Trial) -> dict:
-    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1, log=True)
     backward_chains_max_length = trial.suggest_int(
         'composite_actions.backward_chains.max_length',
         low=2,
@@ -251,8 +250,6 @@ def optimize(env: Environment,
         sampler = RandomSampler(seed=seed)
     elif sampler == 'tpe':
         sampler = TPESampler(n_startup_trials=5, seed=seed)
-    elif sampler == 'skopt':
-        sampler = SkoptSampler(skopt_kwargs={'base_estimator': "GP", 'acq_func': 'gp_hedge'})
     else:
         raise ValueError('Unknown sampler: {}'.format(sampler))
 

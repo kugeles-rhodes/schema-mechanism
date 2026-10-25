@@ -182,7 +182,7 @@ class TestECItemStatistics(TestCase):
 
     def test_specificity_1(self):
         # test: initial specificity SHOULD be NAN
-        self.assertIs(np.NAN, self.item_stats.specificity)
+        self.assertIs(np.nan, self.item_stats.specificity)
 
     def test_specificity_2(self):
         # test: if an item was never On its specificity SHOULD be 1.0

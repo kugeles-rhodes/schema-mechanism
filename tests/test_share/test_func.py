@@ -1,6 +1,6 @@
 import logging
 import logging.config
-from collections import Hashable
+from collections.abc import Hashable
 from copy import copy
 from copy import deepcopy
 from pathlib import Path
