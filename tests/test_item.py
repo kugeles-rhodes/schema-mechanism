@@ -32,6 +32,7 @@ from test_share.test_func import is_eq_transitive
 from test_share.test_func import is_eq_with_null_is_false
 from test_share.test_func import satisfies_equality_checks
 from test_share.test_func import satisfies_hash_checks
+from test_share.test_func import update_delegated_value_helper
 
 
 class TestItem(TestCase):
@@ -121,7 +122,7 @@ class TestItem(TestCase):
             eligibility_trace=ReplacingTrace(
                 decay_strategy=NoDecayStrategy())
         )
-        delegated_value_helper.update(selection_state=(1,), result_state=(2,))
+        update_delegated_value_helper(delegated_value_helper, selection_state=(1,), result_state=(2,))
         set_delegated_value_helper(delegated_value_helper)
 
         # test: if delegated value helper were set properly, the item's delegated value should be equal to item 2's
@@ -215,7 +216,7 @@ class TestSymbolicItem(TestCase):
             eligibility_trace=ReplacingTrace(
                 decay_strategy=NoDecayStrategy())
         )
-        delegated_value_helper.update(selection_state=('1',), result_state=('2',))
+        update_delegated_value_helper(delegated_value_helper, selection_state=('1',), result_state=('2',))
         set_delegated_value_helper(delegated_value_helper)
 
         # test: if delegated value helper were set properly, the item's delegated value should be equal to item 2's
@@ -455,7 +456,9 @@ class TestCompositeItem(unittest.TestCase):
             eligibility_trace=ReplacingTrace(
                 decay_strategy=NoDecayStrategy())
         )
-        delegated_value_helper.update(selection_state=sym_state('A,B'), result_state=sym_state('X'))
+        update_delegated_value_helper(delegated_value_helper,
+                                      selection_state=sym_state('A,B'),
+                                      result_state=sym_state('X'))
         set_delegated_value_helper(delegated_value_helper)
 
         # test: if delegated value helper were set properly, the item's delegated value should be equal to item 2's

@@ -10,6 +10,8 @@ import numpy as np
 import schema_mechanism.serialization.json.decoders
 import schema_mechanism.serialization.json.encoders
 from schema_mechanism.core import Chain
+from schema_mechanism.core import CompositeItem
+from schema_mechanism.core import ItemPool
 from schema_mechanism.core import SchemaPool
 from schema_mechanism.core import SchemaSpinOffType
 from schema_mechanism.core import SchemaTree
@@ -281,30 +283,69 @@ class TestSchemaMemory(TestCase):
         for s in applicable_schemas:
             s.update.assert_called()
 
+            # activated schemas also receive the pre-computed active items (used by their extended contexts)
+            extra_kwargs = {'active_items': ANY} if s.action == selected_schema.action else {}
+
             # test: activated SHOULD be True if schema's action equals selected schema's action
             if s.action == selected_schema.action:
                 s.update.assert_called_with(activated=True, succeeded=ANY, selection_state=ANY, new=ANY, lost=ANY,
-                                            explained=ANY)
+                                            explained=ANY, **extra_kwargs)
 
             # test: activated SHOULD be False if schema's action equals selected schema's action
             else:
                 s.update.assert_called_with(activated=False, succeeded=ANY, selection_state=ANY, new=ANY, lost=ANY,
-                                            explained=ANY)
+                                            explained=ANY, **extra_kwargs)
 
             # test: succeeded SHOULD be True if schema's result is satisfied and schema is activated
             if (s.is_activated(selected_schema, selection_state, applicable=True)
                     and s.result.is_satisfied(result_state)):
                 s.update.assert_called_with(succeeded=True, activated=ANY, selection_state=ANY, new=ANY, lost=ANY,
-                                            explained=ANY)
+                                            explained=ANY, **extra_kwargs)
 
             # test: succeeded SHOULD be False if schema's result is not satisfied or schema is not activated
             else:
                 s.update.assert_called_with(succeeded=False, activated=ANY, selection_state=ANY, new=ANY, lost=ANY,
-                                            explained=ANY)
+                                            explained=ANY, **extra_kwargs)
 
         # test: update SHOULD NOT be called for non-applicable schemas
         for s in non_applicable_schemas:
             s.update.assert_not_called()
+
+    def test_update_all_passes_active_items_to_activated_schemas(self):
+        selection_state = sym_state('1,3,5,7,12')
+        result_state = sym_state('10,11,12')
+        selected_schema = sym_schema('1,3,5,7/A1/10,')
+
+        # a composite item that is On in the selection state; extended contexts only track non-composite items
+        _ = ItemPool().get(sym_state('1,3'), item_type=CompositeItem)
+
+        applicable_schemas = list(self.schema_memory.all_applicable(selection_state))
+        for s in applicable_schemas:
+            s.update = MagicMock()
+
+        self.schema_memory.update_all(
+            SelectionDetails(
+                applicable=applicable_schemas,
+                selected=selected_schema,
+                selection_state=selection_state,
+                terminated_pending=[],
+                effective_value=1.0  # value fabricated. does not matter for test
+            ),
+            result_state
+        )
+
+        # '12' is On but isn't in the item pool: it's held in both states, and only new/lost state elements are added
+        # to the pool during the update. Extended contexts only track pool items, so it's correctly not included.
+        expected_active_items = frozenset(sym_items('1;3;5;7'))
+
+        for s in applicable_schemas:
+            # test: activated schemas SHOULD receive exactly the non-composite items that are On in the selection state
+            if s.is_activated(selected_schema, result_state):
+                self.assertSetEqual(expected_active_items, s.update.call_args.kwargs['active_items'])
+
+            # test: non-activated schemas SHOULD NOT receive them (their extended contexts aren't updated)
+            else:
+                self.assertNotIn('active_items', s.update.call_args.kwargs)
 
     def test_update_all_explained_characterization(self):
         """ Characterization test: pins how update_all currently propagates the "explained" flag.

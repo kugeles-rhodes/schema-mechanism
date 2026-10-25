@@ -46,6 +46,7 @@ from schema_mechanism.core import get_global_params
 from schema_mechanism.core import get_global_stats
 from schema_mechanism.core import is_feature_enabled
 from schema_mechanism.core import is_reliable
+from schema_mechanism.core import items_on
 from schema_mechanism.core import lost_state
 from schema_mechanism.core import new_state
 from schema_mechanism.core import set_action_trace
@@ -150,6 +151,10 @@ class SchemaMemory(Observer):
         new = new_state(selection_state, result_state)
         lost = lost_state(selection_state, result_state)
 
+        # the (non-composite) items that are On in the selection state, computed once for all extended context updates
+        # rather than once per activated schema. This must happen after new_state/lost_state, which can create items.
+        active_items = frozenset(items_on(selection_state, items=ItemPool().items)) if selection_state else None
+
         # I'm assuming that only APPLICABLE schemas should be updated. This is based on the belief that all
         # of the probabilities within a schema are really conditioned on the context being satisfied, even
         # though this fact is implicit.
@@ -162,7 +167,8 @@ class SchemaMemory(Observer):
             selection_state=selection_state,
             result_state=result_state,
             new=new,
-            lost=lost
+            lost=lost,
+            active_items=active_items
         )
 
         self._update_non_activated_schemas(
@@ -186,7 +192,8 @@ class SchemaMemory(Observer):
                                   selection_state: State,
                                   result_state: State,
                                   new: Collection[Item],
-                                  lost: Collection[Item]) -> bool:
+                                  lost: Collection[Item],
+                                  active_items: Optional[Collection[Item]] = None) -> bool:
         """ Updates the (explicitly or implicitly) activated schemas.
 
         Note: "explained" is accumulated in loop order, so an activated schema only sees True if a reliable schema that
@@ -214,7 +221,8 @@ class SchemaMemory(Observer):
                 selection_state=selection_state,
                 new=new,
                 lost=lost,
-                explained=explained
+                explained=explained,
+                active_items=active_items
             )
 
         return explained
@@ -801,11 +809,18 @@ class SchemaMechanism:
         action_trace: Trace[Action] = get_action_trace()
         action_trace.update(actions)
 
+        # all items (including composite items) that are On in the selection state. This runs after
+        # SchemaMemory.update_all, so it includes composite items created by this step's spin-offs.
+        active_items = items_on(selection_state)
+
         delegated_value_helper: DelegatedValueHelper = get_delegated_value_helper()
-        delegated_value_helper.update(selection_state=selection_state, result_state=result_state)
+        delegated_value_helper.update(
+            active_items=active_items,
+            target=delegated_value_helper.effective_state_value(selection_state, result_state)
+        )
 
         global_stats: GlobalStats = get_global_stats()
-        global_stats.update(selection_state=selection_state, result_state=result_state)
+        global_stats.update(result_state=result_state)
 
     def save(
             self,

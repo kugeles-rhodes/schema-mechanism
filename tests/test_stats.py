@@ -88,7 +88,7 @@ class TestGlobalStats(TestCase):
         n: int = stats.n
 
         for _ in range(10):
-            stats.update(selection_state=sym_state('1'), result_state=(sym_state('2')))
+            stats.update(result_state=(sym_state('2')))
 
             # test: the number of selection events (n) should be increment during each update
             self.assertEqual(n + 1, stats.n)
