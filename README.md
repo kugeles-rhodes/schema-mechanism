@@ -16,10 +16,11 @@ place of Drescher's habituation/hysteresis scheme.
 
 - **Python 3.12 or later** is required. Python 3.12, 3.13, and 3.14 are tested in CI; 3.13 is recommended for
   development.
-- macOS, Linux, and Windows are all supported. There are no compiled components in this project, and every pinned
-  dependency ships prebuilt wheels for all three platforms, with one exception: on Linux, the keyboard-input library
-  (`pynput`) depends on `evdev`, which is built from source during installation and needs a C compiler (e.g. the
-  `build-essential` package on Debian/Ubuntu).
+- macOS (12+ on Apple Silicon, 10.15+ on Intel), Linux (x86_64 and aarch64), and Windows (x86_64) are all supported.
+  There are no compiled components in this project, and every pinned dependency ships prebuilt wheels for these
+  platforms, with one exception: on Linux, the keyboard-input library (`pynput`) depends on `evdev`, which is built
+  from source during installation and needs a C compiler and the C library headers (e.g. the `build-essential`
+  package on Debian/Ubuntu).
 
 ### Setting up a virtual environment
 

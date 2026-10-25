@@ -2,8 +2,10 @@
 # Compatible version ranges for the direct dependencies are declared in setup.py.
 #
 # To regenerate after upgrading: create a fresh venv, `pip install -e .` (or the desired versions),
-# run the test suite, then replace the pins below with `pip freeze --exclude-editable`. Keep the
-# platform markers: pynput pulls in pyobjc on macOS and evdev/python-xlib on Linux.
+# run the test suite, then replace the pins below with `pip freeze --exclude-editable`. pip freeze only
+# sees the current platform, so keep (and update) the platform-specific sections at the bottom, then run
+# `python scripts/check_lock.py`, which reports any dependency missing on any supported platform or
+# Python version.
 alembic==1.20.1
 anytree==2.13.0
 colorlog==6.12.0
@@ -34,3 +36,6 @@ pyobjc-framework-Quartz==12.2.2 ; sys_platform == "darwin"
 # Linux-only (via pynput); evdev is distributed as source only and is compiled on install
 evdev==2.0.0 ; sys_platform == "linux"
 python-xlib==0.33 ; sys_platform == "linux"
+
+# Windows-only (via colorlog and tqdm, both from optuna)
+colorama==0.4.6 ; sys_platform == "win32"
