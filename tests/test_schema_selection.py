@@ -6,6 +6,7 @@ import numpy as np
 
 from schema_mechanism.core import Chain
 from schema_mechanism.core import ItemPool
+from schema_mechanism.core import get_action_trace
 from schema_mechanism.func_api import sym_schema
 from schema_mechanism.func_api import sym_state
 from schema_mechanism.modules import PendingDetails
@@ -67,6 +68,12 @@ class TestSchemaSelection(TestCase):
 
         self.sca5_chains = [Chain([self.s1_c12_r2, self.s2_c2_r3, self.s3_c3_r4, self.s1_c4_r5])]
         self.sca5_c2_r35.action.controller.update(self.sca5_chains)
+
+        # the default evaluation strategy's habituation component looks up each schema's action in the global action
+        # trace. common_test_setup starts every test with an empty trace, so register the actions these tests use.
+        get_action_trace().add([
+            self.s1.action, self.s2.action, self.s3.action, self.sca24_c12_r35.action, self.sca5_c2_r35.action
+        ])
 
         self.selection_state = sym_state('1,2')
 

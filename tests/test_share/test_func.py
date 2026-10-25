@@ -14,9 +14,11 @@ from schema_mechanism.core import Schema
 from schema_mechanism.core import SchemaPool
 from schema_mechanism.core import SchemaStats
 from schema_mechanism.core import State
+from schema_mechanism.core import default_action_trace
 from schema_mechanism.core import default_global_params
 from schema_mechanism.core import get_controller_map
 from schema_mechanism.core import items_on
+from schema_mechanism.core import set_action_trace
 from schema_mechanism.core import set_global_params
 from schema_mechanism.func_api import sym_schema
 
@@ -69,6 +71,10 @@ def common_test_setup():
     # resets the composite action controller
     controller_map: ControllerMap = get_controller_map()
     controller_map.clear()
+
+    # resets the action trace so actions registered by previous test cases (or test modules) don't leak into this one.
+    # note: set_action_trace stores a copy, so tests must access the trace via get_action_trace().
+    set_action_trace(default_action_trace)
 
 
 def update_delegated_value_helper(dv_helper: DelegatedValueHelper, selection_state: State, result_state: State) -> None:
