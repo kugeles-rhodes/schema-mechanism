@@ -1,5 +1,7 @@
 import argparse
+import atexit
 import logging.config
+import threading
 from functools import partial
 from functools import wraps
 from pathlib import Path
@@ -121,6 +123,84 @@ def request_stop() -> None:
 
 def is_running() -> bool:
     return _running
+
+
+# A single keyboard listener is shared by every episode in the process. Starting a new listener per episode leaked
+# listener threads and, on macOS, intermittently crashed the process when several listeners initialized pyobjc
+# concurrently (see GitHub issue #12).
+_keyboard_listener: Optional[keyboard.Listener] = None
+_keyboard_control_enabled = True
+_keyboard_listener_lock = threading.Lock()
+
+
+def is_keyboard_control_enabled() -> bool:
+    return _keyboard_control_enabled
+
+
+def enable_keyboard_control() -> None:
+    global _keyboard_control_enabled
+    _keyboard_control_enabled = True
+
+
+def disable_keyboard_control() -> None:
+    """ Disables keyboard control (pause/stop keys) for the rest of the process and stops any running listener.
+
+    Intended for non-interactive runs (e.g., optimizer studies and experiment sweeps), where nobody can press keys.
+
+    :return: None
+    """
+    global _keyboard_control_enabled
+    _keyboard_control_enabled = False
+
+    stop_keyboard_listener()
+
+
+def start_keyboard_listener(on_press: Callable[[keyboard.Key], Any]) -> None:
+    """ Starts the process-wide keyboard listener, unless it is already running or keyboard control is disabled.
+
+    Note: the listener is shared, so only the on_press callback from the first call takes effect.
+
+    :param on_press: the callback invoked with each key press
+
+    :return: None
+    """
+    global _keyboard_listener
+
+    with _keyboard_listener_lock:
+        if not _keyboard_control_enabled or _keyboard_listener is not None:
+            return
+
+        _keyboard_listener = keyboard.Listener(on_press=on_press)
+        _keyboard_listener.start()
+
+
+def stop_keyboard_listener() -> None:
+    """ Stops the process-wide keyboard listener (if one is running).
+
+    :return: None
+    """
+    global _keyboard_listener
+
+    with _keyboard_listener_lock:
+        if _keyboard_listener is None:
+            return
+
+        _keyboard_listener.stop()
+        _keyboard_listener = None
+
+
+atexit.register(stop_keyboard_listener)
+
+
+def configure_keyboard_control(args: argparse.Namespace) -> None:
+    """ Disables keyboard control for non-interactive runs (--optimize or --no_keyboard).
+
+    :param args: the parsed command-line arguments
+
+    :return: None
+    """
+    if getattr(args, 'optimize', False) or getattr(args, 'no_keyboard', False):
+        disable_keyboard_control()
 
 
 ESC_KEY = keyboard.Key.esc
@@ -299,8 +379,7 @@ class Runner(Protocol):
 def _runner(_run: Runner, on_press: RunnerCallback = None) -> Callable[..., Runner]:
     @wraps(_run)
     def _run_wrapper(**kwargs) -> Any:
-        listener = keyboard.Listener(on_press=on_press)
-        listener.start()
+        start_keyboard_listener(on_press=on_press)
 
         start = time()
         results = _run(**kwargs)
@@ -395,6 +474,11 @@ def parse_run_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument(
         '--greedy', required=False, action="store_true", default=False,
         help=f'use a greedy evaluation strategy for schema selection (default: False)'
+    )
+    parser.add_argument(
+        '--no_keyboard', required=False, action="store_true", default=False,
+        help='disable the pause (space) and stop (Esc) keys, e.g. for non-interactive runs; keyboard control is '
+             'always disabled with --optimize (default: False)'
     )
 
     return parser

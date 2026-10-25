@@ -136,7 +136,9 @@ def execute_run(run_id: int, run_args: list[str], output_path: Path) -> None:
     with output_path.open('a') as file:
         file.write(f'\n***** start of run {run_id} *****\n')
         file.flush()
-        _ = subprocess.run([PYTHON_EXEC, SCRIPT, *run_args], text=True, check=True, stdout=file)
+
+        # runs are non-interactive (output is captured), so the pause/stop keyboard listener isn't needed
+        _ = subprocess.run([PYTHON_EXEC, SCRIPT, *run_args, '--no_keyboard'], text=True, check=True, stdout=file)
         file.write(f'\n***** end of run {run_id} *****\n')
 
 
