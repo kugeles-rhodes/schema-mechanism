@@ -14,74 +14,94 @@ place of Drescher's habituation/hysteresis scheme.
 
 ### Requirements
 
-- **Python 3.12 or later** is required. Python 3.12, 3.13, and 3.14 are tested in CI; 3.13 is recommended for
-  development.
+- **Python 3.12 or later** is required. Python 3.12, 3.13, and 3.14 are tested in CI on Linux, macOS, and Windows;
+  3.13 is used for development (pinned in `.python-version`).
+- **[uv](https://docs.astral.sh/uv/)** (0.12.18 or later) manages the Python version, the virtual environment, and
+  the dependencies. You don't need to install Python separately; uv downloads the right version if it's missing.
 - macOS (12+ on Apple Silicon, 10.15+ on Intel), Linux (x86_64 and aarch64), and Windows (x86_64) are all supported.
-  There are no compiled components in this project, and every pinned dependency ships prebuilt wheels for these
+  There are no compiled components in this project, and every locked dependency ships prebuilt wheels for these
   platforms, with one exception: on Linux, the keyboard-input library (`pynput`) depends on `evdev`, which is built
   from source during installation and needs a C compiler and the C library headers (e.g. the `build-essential`
   package on Debian/Ubuntu).
 
-### Setting up a virtual environment
+### Installing uv
 
-**macOS and Linux** — using `pyenv` to install the recommended Python version, then creating the virtual environment
-in the project root:
+macOS and Linux:
 
 ```bash
-pyenv install -s 3.13.7
-~/.pyenv/versions/3.13.7/bin/python3.13 -m venv venv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**Windows** — install Python 3.13 from [python.org](https://www.python.org/downloads/) (or with `pyenv-win`), then use
-the `py` launcher to select it:
+Windows (PowerShell):
 
 ```powershell
-py -3.13 -m venv venv
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### Activating the virtual environment
+uv can also be installed with Homebrew (`brew install uv`), `pipx install uv`, or `pip install uv`; see the
+[installation guide](https://docs.astral.sh/uv/getting-started/installation/) for details.
 
-From the project root, on macOS or Linux (`bash`/`zsh`):
+### Setting up the project
+
+From the project root:
 
 ```bash
-source venv/bin/activate
+uv sync
 ```
 
-On Windows, the activation script lives under `venv\Scripts` instead:
+This creates a virtual environment in `.venv/` using the Python version from `.python-version`, installs the exact
+dependency versions recorded in `uv.lock` (including the development tools in the `dev` dependency group, such as
+`coverage`), and installs this project in editable mode, so changes under `src/` take effect without reinstalling.
+`pyproject.toml` declares the compatible dependency version ranges; `uv.lock` records the exact versions, resolved for
+every supported platform and Python version.
 
-```bat
-venv\Scripts\activate.bat
+### Running commands
+
+Prefix commands with `uv run`, which runs them in the project's environment (and re-syncs it first if `pyproject.toml`
+or `uv.lock` changed):
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
+
+Alternatively, activate the environment once per shell, after which `python` refers to `.venv`'s interpreter:
+
+```bash
+source .venv/bin/activate        # macOS and Linux (bash/zsh)
 ```
 
 ```powershell
-venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1       # Windows PowerShell (or .venv\Scripts\activate.bat in cmd)
 ```
 
-If PowerShell refuses to run `Activate.ps1` because of its execution policy, either use the `activate.bat` form
-above or allow local scripts for the current user with
-`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+If PowerShell refuses to run `Activate.ps1` because of its execution policy, either use the `activate.bat` form or
+allow local scripts for the current user with `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+`deactivate` restores the original shell environment.
 
-Once activated, `python` and `pip` resolve to the virtual environment's copies on every platform, and `deactivate`
-restores the original shell environment.
+**The commands in the rest of this README assume an activated environment.** Without activating, prefix them with
+`uv run`, e.g. `python src/examples/multi_arm_bandits.py` becomes `uv run python src/examples/multi_arm_bandits.py`.
 
-**Every command in the rest of this README assumes an activated virtual environment.** To run one without
-activating, prefix it with `venv/bin/` on macOS and Linux, or `venv\Scripts\` on Windows. For example,
-`python -m unittest discover -s tests -v` becomes `venv/bin/python -m unittest discover -s tests -v` or
-`venv\Scripts\python -m unittest discover -s tests -v`.
-
-### Installing dependencies
-
-`requirements.txt` pins the exact versions of every dependency (including transitive ones) that the project is tested
-with, while `setup.py` declares the compatible version ranges. Activate the virtual environment created above, then
-install:
+### Managing dependencies
 
 ```bash
-pip install -r requirements.txt
-pip install -e .
+uv add <package>          # add a runtime dependency (updates pyproject.toml and uv.lock)
+uv add --dev <package>    # add a development-only dependency
+uv lock --upgrade         # upgrade all locked versions within the ranges in pyproject.toml
 ```
 
-The `pip install -e .` step performs an editable install of this project (configured via `setup.py`), which puts the
-`schema_mechanism` package on the Python path without needing to set `PYTHONPATH` manually.
+Commit `pyproject.toml` and `uv.lock` together. CI installs with `uv sync --locked`, which fails if `uv.lock` is out of
+date with `pyproject.toml`.
+
+### Installing without uv
+
+The project is a standard `pyproject.toml` package, so pip can install it into any Python 3.12+ environment:
+
+```bash
+pip install -e .          # or `pip install .` for a non-editable install
+```
+
+pip installs the newest dependency versions allowed by the ranges in `pyproject.toml`, not the exact versions in
+`uv.lock`, and doesn't install the `dev` dependency group.
 
 ### Running tests
 
@@ -95,6 +115,12 @@ A single test module or test case can be run directly, e.g.:
 
 ```bash
 python -m unittest tests.test_schema -v
+```
+
+With coverage (configured in `.coveragerc` to measure `src/schema_mechanism` only):
+
+```bash
+coverage run -m unittest discover -s tests && coverage report
 ```
 
 ## Running the Multi-Armed Bandit example

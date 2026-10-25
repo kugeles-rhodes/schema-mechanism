@@ -1,2 +1,3 @@
 [run]
-include = src/schema_mechanism*
+# measure the library only (not examples/scripts/tests); `source` also reports modules that no test imports
+source = src/schema_mechanism
