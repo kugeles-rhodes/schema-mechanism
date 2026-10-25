@@ -31,7 +31,6 @@ class AcceptAllValidator(Validator):
         return hash(self.__class__.__name__)
 
 
-# TODO: This class could be enhanced to support any object type that is orderable
 class RangeValidator(Validator):
 
     def __init__(self,

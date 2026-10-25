@@ -352,6 +352,31 @@ class TestAssociativeArrayList(TestCase):
             self.assertIn(e, self.array_list)
             self.assertEqual(v, self.array_list[e])
 
+    def test_update_with_new_multi_character_and_non_iterable_keys(self):
+        # test: new multi-character string keys should be added whole (not character by character)
+        self.array_list.update({'abc': 1.0, 'de': 2.0})
+
+        self.assertEqual(2, len(self.array_list))
+        self.assertListEqual(['abc', 'de'], list(self.array_list))
+        self.assertEqual(1.0, self.array_list['abc'])
+        self.assertEqual(2.0, self.array_list['de'])
+
+        for unexpected_key in ['a', 'b', 'c', 'd', 'e']:
+            self.assertNotIn(unexpected_key, self.array_list)
+
+        # test: new non-iterable keys should be supported
+        self.array_list.update({7: 7.0})
+
+        self.assertEqual(3, len(self.array_list))
+        self.assertEqual(7.0, self.array_list[7])
+
+        # test: updating existing keys should change their values without adding keys
+        self.array_list.update({'abc': 10.0, 7: 70.0})
+
+        self.assertEqual(3, len(self.array_list))
+        self.assertEqual(10.0, self.array_list['abc'])
+        self.assertEqual(70.0, self.array_list[7])
+
     def test_iter(self):
         keys = [str(i) for i in range(10)]
         self.array_list.add(keys)

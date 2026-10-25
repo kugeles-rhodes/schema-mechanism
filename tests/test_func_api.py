@@ -10,7 +10,6 @@ from schema_mechanism.core import SchemaTreeNode
 from schema_mechanism.core import SchemaUniqueKey
 from schema_mechanism.core import StateAssertion
 from schema_mechanism.core import SymbolicItem
-from schema_mechanism.func_api import sym_assert
 from schema_mechanism.func_api import sym_composite_item
 from schema_mechanism.func_api import sym_item
 from schema_mechanism.func_api import sym_items
@@ -191,12 +190,12 @@ class TestFunctionalApi(unittest.TestCase):
         # context and action node
         stn = sym_schema_tree_node('1,2,3')
         self.assertIsInstance(stn, SchemaTreeNode)
-        self.assertEqual(sym_assert('1,2,3'), stn.context)
+        self.assertEqual(sym_state_assert('1,2,3'), stn.context)
 
         # should work even if a result is given
         stn = sym_schema_tree_node('1,2,3')
         self.assertIsInstance(stn, SchemaTreeNode)
-        self.assertEqual(sym_assert('1,2,3'), stn.context)
+        self.assertEqual(sym_state_assert('1,2,3'), stn.context)
 
     def test_sym_schema(self):
         # no action should return error
@@ -215,7 +214,7 @@ class TestFunctionalApi(unittest.TestCase):
         self.assertIsNot(NULL_STATE_ASSERT, schema.context)
         self.assertIs(NULL_STATE_ASSERT, schema.result)
         self.assertEqual(Action('A1'), schema.action)
-        self.assertEqual(sym_assert('1,2'), schema.context)
+        self.assertEqual(sym_state_assert('1,2'), schema.context)
         self.assertIs(NULL_STATE_ASSERT, schema.result)
 
         # result only schema
@@ -223,21 +222,21 @@ class TestFunctionalApi(unittest.TestCase):
         self.assertIsInstance(schema, Schema)
         self.assertIs(NULL_STATE_ASSERT, schema.context)
         self.assertEqual(Action('A1'), schema.action)
-        self.assertEqual(sym_assert('1,2'), schema.result)
+        self.assertEqual(sym_state_assert('1,2'), schema.result)
 
         # full schema
         schema = sym_schema('1,2/A1/3,4')
         self.assertIsInstance(schema, Schema)
-        self.assertEqual(sym_assert('1,2'), schema.context)
+        self.assertEqual(sym_state_assert('1,2'), schema.context)
         self.assertEqual(Action('A1'), schema.action)
-        self.assertEqual(sym_assert('3,4'), schema.result)
+        self.assertEqual(sym_state_assert('3,4'), schema.result)
 
         # schema with composite item in result
         schema = sym_schema('/A1/(3,4),5')
         self.assertIsInstance(schema, Schema)
         self.assertIs(NULL_STATE_ASSERT, schema.context)
         self.assertEqual(Action('A1'), schema.action)
-        self.assertEqual(sym_assert('(3,4),5'), schema.result)
+        self.assertEqual(sym_state_assert('(3,4),5'), schema.result)
 
         # test: verify that multiple calls with the same schema string return the same object
         for str_repr in ['/A1/', '1,/A1/', '1,2/A1/', '/A1/1,', '/A1/1,2', '1,/A1/3,', '1,2/A1/3,4', '/A1/(3,4),5']:
@@ -265,7 +264,7 @@ class TestFunctionalApi(unittest.TestCase):
         # context only schema with composite actions
         schema = sym_schema('1,2/(1,2),/')
         self.assertIsInstance(schema, Schema)
-        self.assertEqual(sym_assert('1,2'), schema.context)
+        self.assertEqual(sym_state_assert('1,2'), schema.context)
         self.assertEqual(CompositeAction(sym_state_assert('(1,2),')), schema.action)
         self.assertIs(NULL_STATE_ASSERT, schema.result)
 
@@ -274,11 +273,11 @@ class TestFunctionalApi(unittest.TestCase):
         self.assertIsInstance(schema, Schema)
         self.assertIs(NULL_STATE_ASSERT, schema.context)
         self.assertEqual(CompositeAction(sym_state_assert('(1,2),')), schema.action)
-        self.assertEqual(sym_assert('1,2'), schema.result)
+        self.assertEqual(sym_state_assert('1,2'), schema.result)
 
         # full schema
         schema = sym_schema('1,2/(1,2),/3,4')
         self.assertIsInstance(schema, Schema)
-        self.assertEqual(sym_assert('1,2'), schema.context)
+        self.assertEqual(sym_state_assert('1,2'), schema.context)
         self.assertEqual(CompositeAction(sym_state_assert('(1,2),')), schema.action)
-        self.assertEqual(sym_assert('3,4'), schema.result)
+        self.assertEqual(sym_state_assert('3,4'), schema.result)
