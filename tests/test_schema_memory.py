@@ -31,6 +31,7 @@ from schema_mechanism.modules import create_result_spin_off
 from schema_mechanism.serialization import create_manifest
 from test_share.test_classes import MockSchema
 from test_share.test_func import common_test_setup
+from test_share.test_func import sym_schema_with_reliability
 
 
 class TestSchemaMemory(TestCase):
@@ -58,7 +59,7 @@ class TestSchemaMemory(TestCase):
         self.tree.add(source=self.s101, schemas=(self.s101_r100,))
 
         # composite action context spin-off
-        self.s101_1_r100 = sym_schema('1,/101,/100,', reliability=1.0)
+        self.s101_1_r100 = sym_schema_with_reliability('1,/101,/100,', 1.0)
         self.tree.add(source=self.s101_r100, schemas=(self.s101_1_r100,))
 
         s1_1 = sym_schema('1,/A1/')
@@ -91,7 +92,7 @@ class TestSchemaMemory(TestCase):
         s1_r101 = sym_schema('/A1/101,')
         self.tree.add(source=s1, schemas=(s1_r101,))
 
-        s1_1_r101 = sym_schema('1,/A1/101,', reliability=1.0)
+        s1_1_r101 = sym_schema_with_reliability('1,/A1/101,', 1.0)
         self.tree.add(source=s1_r101, schemas=(s1_1_r101,))
 
         self.bare_schemas = {
