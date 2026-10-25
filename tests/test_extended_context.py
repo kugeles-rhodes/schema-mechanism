@@ -510,7 +510,7 @@ class TestExtendedContext(TestCase):
         self.assertTrue(i1_stats.negative_correlation_stat <= neg_threshold)
 
         self.assertEqual(1, len(self.ec.pending_relevant_items))
-        self.ec.check_pending_relevant_items()
+        self.ec.flush_pending_relevant_items()
         self.assertEqual(0, len(self.ec.pending_relevant_items))
 
         # verify only one relevant item
@@ -524,7 +524,7 @@ class TestExtendedContext(TestCase):
         self.ec.update(i2, on=False, success=False)
 
         self.assertEqual(1, len(self.ec.pending_relevant_items))
-        self.ec.check_pending_relevant_items()
+        self.ec.flush_pending_relevant_items()
         self.assertEqual(0, len(self.ec.pending_relevant_items))
 
         self.assertEqual(2, len(self.ec.relevant_items))

@@ -1323,7 +1323,7 @@ class ExtendedContext(ExtendedItemCollection):
             on = item.is_on(selection_state) if active_items is None else item in active_items
             self.update(item=item, on=on, success=success, count=count)
 
-        self.check_pending_relevant_items()
+        self.flush_pending_relevant_items()
 
         if self.new_relevant_items:
             self.notify_all(spin_off_type=SchemaSpinOffType.CONTEXT)
@@ -1352,8 +1352,11 @@ class ExtendedContext(ExtendedItemCollection):
     def pending_max_specificity(self) -> float:
         return self._pending_max_specificity
 
-    # TODO: Rename this method. It is not a check, but more of a flush of the pending items to the super class.
-    def check_pending_relevant_items(self) -> None:
+    def flush_pending_relevant_items(self) -> None:
+        """ Moves the pending relevant items into this extended context's relevant items and clears the pending set.
+
+        :return: None
+        """
         for item in self._pending_relevant_items:
             self.update_relevant_items(item=item)
 
