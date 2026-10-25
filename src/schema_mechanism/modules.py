@@ -131,7 +131,6 @@ class SchemaMemory(Observer):
             return self.schema_collection == other.schema_collection
         return False if other is None else NotImplemented
 
-    # TODO: this method is too complicated. I need to refactor it into multiple methods.
     def update_all(self, selection_details: SelectionDetails, result_state: State) -> None:
         """ Updates schema statistics based on results of previously selected schema(s).
 
@@ -151,10 +150,6 @@ class SchemaMemory(Observer):
         new = new_state(selection_state, result_state)
         lost = lost_state(selection_state, result_state)
 
-        # True if state transition explained by activated reliable schema
-        #     (See SupportedFeature.ER_SUPPRESS_UPDATE_ON_EXPLAINED)
-        explained = False
-
         # I'm assuming that only APPLICABLE schemas should be updated. This is based on the belief that all
         # of the probabilities within a schema are really conditioned on the context being satisfied, even
         # though this fact is implicit.
@@ -162,7 +157,49 @@ class SchemaMemory(Observer):
         non_activated_schemas = [s for s in applicable if not s.is_activated(selected_schema, result_state)]
 
         # all activated schemas must be updated BEFORE non-activated.
-        for schema in activated_schemas:
+        explained = self._update_activated_schemas(
+            schemas=activated_schemas,
+            selection_state=selection_state,
+            result_state=result_state,
+            new=new,
+            lost=lost
+        )
+
+        self._update_non_activated_schemas(
+            schemas=non_activated_schemas,
+            selection_state=selection_state,
+            new=new,
+            lost=lost,
+            explained=explained
+        )
+
+        self._update_terminated_pending(
+            terminated_pending=selection_details.terminated_pending,
+            result_state=result_state,
+            explained=explained
+        )
+
+        self._update_controllers(result_state=result_state)
+
+    def _update_activated_schemas(self,
+                                  schemas: Collection[Schema],
+                                  selection_state: State,
+                                  result_state: State,
+                                  new: Collection[Item],
+                                  lost: Collection[Item]) -> bool:
+        """ Updates the (explicitly or implicitly) activated schemas.
+
+        Note: "explained" is accumulated in loop order, so an activated schema only sees True if a reliable schema that
+        predicts the result state was updated before it. This order dependence is preserved deliberately for now; it is
+        pinned by TestSchemaMemory.test_update_all_explained_characterization.
+
+        :return: True if the state transition was explained by an activated reliable schema; False otherwise.
+        """
+        # True if state transition explained by activated reliable schema
+        #     (See SupportedFeature.ER_SUPPRESS_UPDATE_ON_EXPLAINED)
+        explained = False
+
+        for schema in schemas:
             # this supports SupportedFeature.ER_SUPPRESS_UPDATE_ON_EXPLAINED
             explained |= True if is_reliable(schema) and schema.predicts_state(result_state) else False
             succeeded = schema_succeeded(
@@ -180,7 +217,15 @@ class SchemaMemory(Observer):
                 explained=explained
             )
 
-        for schema in non_activated_schemas:
+        return explained
+
+    def _update_non_activated_schemas(self,
+                                      schemas: Collection[Schema],
+                                      selection_state: State,
+                                      new: Collection[Item],
+                                      lost: Collection[Item],
+                                      explained: bool) -> None:
+        for schema in schemas:
             schema.update(
                 activated=False,
                 succeeded=False,  # success requires implicit or explicit activation
@@ -190,8 +235,12 @@ class SchemaMemory(Observer):
                 explained=explained
             )
 
-        # process terminated_pending
-        for pending_details in selection_details.terminated_pending:
+    def _update_terminated_pending(self,
+                                   terminated_pending: Collection[PendingDetails],
+                                   result_state: State,
+                                   explained: bool) -> None:
+        """ Updates pending (composite action) schemas that were aborted or interrupted. """
+        for pending_details in terminated_pending:
 
             pending_schema = pending_details.schema
             pending_selection_state = pending_details.selection_state
@@ -207,6 +256,8 @@ class SchemaMemory(Observer):
                     explained=explained
                 )
 
+    def _update_controllers(self, result_state: State) -> None:
+        """ Updates the controllers of composite actions whose goal states are satisfied by the result state. """
         params = get_global_params()
 
         # TODO: there must be a better way to choose when to perform an update than this randomized mess.

@@ -20,11 +20,14 @@ from schema_mechanism.func_api import sym_item
 from schema_mechanism.func_api import sym_items
 from schema_mechanism.func_api import sym_schema
 from schema_mechanism.func_api import sym_state
+from schema_mechanism.modules import PendingDetails
+from schema_mechanism.modules import PendingStatus
 from schema_mechanism.modules import SchemaMemory
 from schema_mechanism.modules import SelectionDetails
 from schema_mechanism.modules import create_context_spin_off
 from schema_mechanism.modules import create_result_spin_off
 from schema_mechanism.serialization import create_manifest
+from test_share.test_classes import MockSchema
 from test_share.test_func import common_test_setup
 
 
@@ -302,6 +305,69 @@ class TestSchemaMemory(TestCase):
         # test: update SHOULD NOT be called for non-applicable schemas
         for s in non_applicable_schemas:
             s.update.assert_not_called()
+
+    def test_update_all_explained_characterization(self):
+        """ Characterization test: pins how update_all currently propagates the "explained" flag.
+
+        "explained" is accumulated *inside* the activated-schemas loop, so an activated schema only sees True if a
+        reliable schema predicting the result state was processed *before* it; non-activated and terminated pending
+        schemas see the final value. The order dependence is a known bug, deliberately preserved by the refactoring in
+        issue #14 and to be fixed separately; when it is fixed, these expectations change.
+        """
+        selection_state = sym_state('1,2')
+        result_state = sym_state('10')
+
+        bare = sym_schema('/A1/')  # bare schemas are never reliable, so they never set "explained" themselves
+        # predicts the entire result state (MockSchema is needed for a fixed reliability; plain schemas ignore it)
+        reliable_predictor = sym_schema('1,/A1/10,', schema_type=MockSchema, reliability=1.0)
+        other_activated = sym_schema('2,/A1/11,')
+        non_activated_1 = sym_schema('/A2/')
+        non_activated_2 = sym_schema('1,/A2/')
+        aborted_pending = sym_schema('/101,/')
+        completed_pending = sym_schema('/102,/')
+
+        schemas = [bare, reliable_predictor, other_activated, non_activated_1, non_activated_2, aborted_pending,
+                   completed_pending]
+
+        def run_update_all(activated_order: list) -> dict:
+            for s in schemas:
+                s.update = MagicMock()
+
+            selection_details = SelectionDetails(
+                applicable=[*activated_order, non_activated_1, non_activated_2],
+                selected=reliable_predictor,
+                selection_state=selection_state,
+                terminated_pending=[
+                    PendingDetails(schema=aborted_pending, selection_state=selection_state,
+                                   status=PendingStatus.ABORTED),
+                    PendingDetails(schema=completed_pending, selection_state=selection_state,
+                                   status=PendingStatus.COMPLETED),
+                ],
+                effective_value=1.0  # value fabricated. does not matter for test
+            )
+            self.schema_memory.update_all(selection_details, result_state)
+
+            return {s: s.update.call_args.kwargs['explained'] for s in schemas if s.update.called}
+
+        # test: an activated schema processed BEFORE the reliable predictor SHOULD (currently) see explained=False
+        explained = run_update_all(activated_order=[bare, reliable_predictor, other_activated])
+
+        self.assertFalse(explained[bare])
+        self.assertTrue(explained[reliable_predictor])
+        self.assertTrue(explained[other_activated])
+
+        # test: non-activated and aborted/interrupted pending schemas SHOULD see the final value
+        self.assertTrue(explained[non_activated_1])
+        self.assertTrue(explained[non_activated_2])
+        self.assertTrue(explained[aborted_pending])
+
+        # test: completed pending schemas SHOULD NOT be updated
+        self.assertNotIn(completed_pending, explained)
+
+        # test: the same schema processed AFTER the reliable predictor SHOULD see explained=True (order dependence)
+        explained = run_update_all(activated_order=[reliable_predictor, bare, other_activated])
+
+        self.assertTrue(explained[bare])
 
     def test_receive_1(self):
         # create a context spin-off
