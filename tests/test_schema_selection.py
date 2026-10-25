@@ -6,6 +6,7 @@ import numpy as np
 
 from schema_mechanism.core import Chain
 from schema_mechanism.core import ItemPool
+from schema_mechanism.core import get_action_trace
 from schema_mechanism.func_api import sym_schema
 from schema_mechanism.func_api import sym_state
 from schema_mechanism.modules import PendingDetails
@@ -18,6 +19,7 @@ from schema_mechanism.strategies.selection import RandomizeBestSelectionStrategy
 from test_share.test_classes import MockSchemaSelection
 from test_share.test_classes import MockSymbolicItem
 from test_share.test_func import common_test_setup
+from test_share.test_func import sym_schema_with_reliability
 
 
 class TestSchemaSelection(TestCase):
@@ -34,29 +36,31 @@ class TestSchemaSelection(TestCase):
         self.i6 = pool.get('6', item_type=MockSymbolicItem, primitive_value=-3.0, avg_accessible_value=0.0)
 
         # note: negated items have zero pv
-        self.s1 = sym_schema('/A1/', reliability=0.0)  # total pv = 0.0; total dv = 0.0
-        self.s2 = sym_schema('/A2/', reliability=0.0)  # total pv = 0.0; total dv = 0.0
-        self.s3 = sym_schema('/A3/', reliability=0.0)  # total pv = 0.0; total dv = 0.0
+        # note: bare schemas are never reliable (their reliability is always NaN)
+        self.s1 = sym_schema('/A1/')  # total pv = 0.0; total dv = 0.0
+        self.s2 = sym_schema('/A2/')  # total pv = 0.0; total dv = 0.0
+        self.s3 = sym_schema('/A3/')  # total pv = 0.0; total dv = 0.0
 
-        self.s1_c12_r3 = sym_schema('1,2/A1/3,', reliability=1.0)  # total pv = 0.95; total dv = -1.0
-        self.s1_c12_r4 = sym_schema('1,2/A1/4,', reliability=1.0)  # total pv = -1.0; total dv = 0.95
-        self.s1_c12_r5 = sym_schema('1,2/A1/5,', reliability=1.0)  # total pv = 2.0; total dv = 0.0
-        self.s1_c12_r34 = sym_schema('1,2/A1/(3,4),', reliability=1.0)  # total pv = -0.05; total dv = 0.95
-        self.s1_c12_r345 = sym_schema('1,2/A1/(3,4,5),', reliability=1.0)  # total pv = 1.95; total dv = 0.95
-        self.s1_c12_r3456 = sym_schema('1,2/A1/(3,4,5,6),', reliability=1.0)  # total pv = -1.05; total dv = 0.95
-        self.s1_c12_r345_not6 = sym_schema('1,2/A1/(3,4,5,~6),', reliability=1.0)  # total pv = 1.95; total dv = 0.95
+        self.s1_c12_r3 = sym_schema_with_reliability('1,2/A1/3,', 1.0)  # total pv = 0.95; total dv = -1.0
+        self.s1_c12_r4 = sym_schema_with_reliability('1,2/A1/4,', 1.0)  # total pv = -1.0; total dv = 0.95
+        self.s1_c12_r5 = sym_schema_with_reliability('1,2/A1/5,', 1.0)  # total pv = 2.0; total dv = 0.0
+        self.s1_c12_r34 = sym_schema_with_reliability('1,2/A1/(3,4),', 1.0)  # total pv = -0.05; total dv = 0.95
+        self.s1_c12_r345 = sym_schema_with_reliability('1,2/A1/(3,4,5),', 1.0)  # total pv = 1.95; total dv = 0.95
+        self.s1_c12_r3456 = sym_schema_with_reliability('1,2/A1/(3,4,5,6),', 1.0)  # total pv = -1.05; total dv = 0.95
+        # total pv = 1.95; total dv = 0.95
+        self.s1_c12_r345_not6 = sym_schema_with_reliability('1,2/A1/(3,4,5,~6),', 1.0)
 
         # chained schemas
-        self.s1_c12_r2 = sym_schema('1,2/A1/2,', reliability=1.0)  # total pv = 0.0; total dv = 2.0
-        self.s2_c2_r3 = sym_schema('2,/A2/3,', reliability=1.0)  # total pv = 0.95; total dv = -1.0
-        self.s3_c3_r4 = sym_schema('3,/A3/4,', reliability=1.0)  # total pv = -1.0; total dv = 0.95
-        self.s1_c4_r5 = sym_schema('4,/A1/5,', reliability=1.0)  # total pv = 2.0; total dv = 0.95
-        self.s3_c5_r24 = sym_schema('5,/A3/(2,4),', reliability=1.0)  # total pv = -1.0; total dv = 2.0
+        self.s1_c12_r2 = sym_schema_with_reliability('1,2/A1/2,', 1.0)  # total pv = 0.0; total dv = 2.0
+        self.s2_c2_r3 = sym_schema_with_reliability('2,/A2/3,', 1.0)  # total pv = 0.95; total dv = -1.0
+        self.s3_c3_r4 = sym_schema_with_reliability('3,/A3/4,', 1.0)  # total pv = -1.0; total dv = 0.95
+        self.s1_c4_r5 = sym_schema_with_reliability('4,/A1/5,', 1.0)  # total pv = 2.0; total dv = 0.95
+        self.s3_c5_r24 = sym_schema_with_reliability('5,/A3/(2,4),', 1.0)  # total pv = -1.0; total dv = 2.0
 
         # composite action schemas
-        self.sca24_c12_r35 = sym_schema('1,2/2,4/(3,5),', reliability=1.0)  # total pv = 2.95; total dv = 0.95
-        self.sca24_c12_r136 = sym_schema('1,2/2,4/(1,3,6),', reliability=1.0)  # total pv = -2.05; total dv = 0.0
-        self.sca5_c2_r35 = sym_schema('2,/5,/(3,5),', reliability=1.0)  # total pv = 2.95; total dv = 0.95
+        self.sca24_c12_r35 = sym_schema_with_reliability('1,2/2,4/(3,5),', 1.0)  # total pv = 2.95; total dv = 0.95
+        self.sca24_c12_r136 = sym_schema_with_reliability('1,2/2,4/(1,3,6),', 1.0)  # total pv = -2.05; total dv = 0.0
+        self.sca5_c2_r35 = sym_schema_with_reliability('2,/5,/(3,5),', 1.0)  # total pv = 2.95; total dv = 0.95
 
         self.sca24_chains = [Chain([self.s1_c12_r2, self.s2_c2_r3, self.s3_c3_r4, self.s1_c4_r5, self.s3_c5_r24])]
         self.sca24_c12_r35.action.controller.update(self.sca24_chains)
@@ -64,6 +68,12 @@ class TestSchemaSelection(TestCase):
 
         self.sca5_chains = [Chain([self.s1_c12_r2, self.s2_c2_r3, self.s3_c3_r4, self.s1_c4_r5])]
         self.sca5_c2_r35.action.controller.update(self.sca5_chains)
+
+        # the default evaluation strategy's habituation component looks up each schema's action in the global action
+        # trace. common_test_setup starts every test with an empty trace, so register the actions these tests use.
+        get_action_trace().add([
+            self.s1.action, self.s2.action, self.s3.action, self.sca24_c12_r35.action, self.sca5_c2_r35.action
+        ])
 
         self.selection_state = sym_state('1,2')
 
@@ -317,7 +327,7 @@ class TestSchemaSelection(TestCase):
         self.assertIs(mock_ss.pending_schema, pending)
 
         _ = ItemPool().get('HIGH', item_type=MockSymbolicItem, primitive_value=np.inf, avg_accessible_value=np.inf)
-        s_high = sym_schema('2,/A2/HIGH,', reliability=1.0)
+        s_high = sym_schema_with_reliability('2,/A2/HIGH,', 1.0)
 
         # satisfies context of component self.s2_c2_r3 and high-value alternative
         sd = mock_ss.select([self.s2_c2_r3, s_high], sym_state('2'))

@@ -40,3 +40,31 @@ jobs:
       - name: Run unit tests
         if: runner.os != 'Linux'
         run: uv run --locked python -m unittest discover -s tests -v
+
+  # Runs each test module on its own, so a module can't silently depend on global state (e.g., the action trace) left
+  # behind by modules that happen to run before it in the full suite.
+  isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: '0.12.18'
+          python-version: '3.13'
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run each test module on its own
+        run: |
+          failed=0
+          for f in tests/test_*.py; do
+            module=$(basename "$f")
+            if ! xvfb-run -a uv run --locked python -m unittest discover -s tests -p "$module"; then
+              echo "::error file=$f::$module fails when run on its own"
+              failed=1
+            fi
+          done
+          exit $failed

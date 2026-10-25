@@ -3,20 +3,59 @@ import logging.config
 from collections.abc import Hashable
 from copy import copy
 from copy import deepcopy
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
 from schema_mechanism.core import ControllerMap
 from schema_mechanism.core import DelegatedValueHelper
 from schema_mechanism.core import ItemPool
+from schema_mechanism.core import Schema
 from schema_mechanism.core import SchemaPool
+from schema_mechanism.core import SchemaStats
 from schema_mechanism.core import State
+from schema_mechanism.core import default_action_trace
 from schema_mechanism.core import default_global_params
 from schema_mechanism.core import get_controller_map
 from schema_mechanism.core import items_on
+from schema_mechanism.core import set_action_trace
 from schema_mechanism.core import set_global_params
+from schema_mechanism.func_api import sym_schema
 
 logger = logging.getLogger(__name__)
+
+
+def sym_schema_with_reliability(str_repr: str, reliability: float, **kwargs) -> Schema:
+    """ Returns a (real, serializable) schema whose reliability is exactly the given value.
+
+    Note: sym_schema(..., reliability=...) silently ignores the reliability unless schema_type=MockSchema. This helper
+    instead gives the schema activation statistics with n_success / n_activated == reliability.
+
+    :param str_repr: the schema's string representation (see sym_schema)
+    :param reliability: the reliability, a value in [0.0, 1.0] that is a fraction with a denominator of at most 100
+    :param kwargs: optional keyword arguments passed to sym_schema
+
+    :raises ValueError: if the reliability can't be represented, if the schema is bare (bare schemas' reliability is
+        always NaN), or if the schema doesn't end up with the requested reliability (e.g., because an identical schema
+        was already in the schema pool, in which case sym_schema returns it unchanged)
+
+    :return: the schema
+    """
+    fraction = Fraction(reliability).limit_denominator(100)
+    if not 0.0 <= reliability <= 1.0 or float(fraction) != reliability:
+        raise ValueError(f'Unsupported reliability: {reliability}')
+
+    stats = SchemaStats(n=fraction.denominator, n_activated=fraction.denominator, n_success=fraction.numerator)
+    schema = sym_schema(str_repr, schema_stats=stats, **kwargs)
+
+    if schema.is_bare():
+        raise ValueError(f'Bare schemas have no reliability (it is always NaN): {str_repr}')
+
+    if schema.reliability != reliability:
+        raise ValueError(f'Schema {str_repr} has reliability {schema.reliability}, not {reliability} '
+                         '(was an identical schema already in the schema pool?)')
+
+    return schema
 
 
 def common_test_setup():
@@ -32,6 +71,10 @@ def common_test_setup():
     # resets the composite action controller
     controller_map: ControllerMap = get_controller_map()
     controller_map.clear()
+
+    # resets the action trace so actions registered by previous test cases (or test modules) don't leak into this one.
+    # note: set_action_trace stores a copy, so tests must access the trace via get_action_trace().
+    set_action_trace(default_action_trace)
 
 
 def update_delegated_value_helper(dv_helper: DelegatedValueHelper, selection_state: State, result_state: State) -> None:
