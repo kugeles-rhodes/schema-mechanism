@@ -254,7 +254,7 @@ class AssociativeArrayList(Generic[T]):
     def update(self, other: Union[AssociativeArrayList, dict]) -> None:
         for key in other:
             if key not in self:
-                self.add(key)
+                self.add([key])
 
             index = self._indexes[key]
             self._values[index] = other[key]

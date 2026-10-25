@@ -15,7 +15,6 @@ from schema_mechanism.core import Schema
 from schema_mechanism.core import SchemaTree
 from schema_mechanism.core import get_controller_map
 from schema_mechanism.core import get_global_params
-from schema_mechanism.func_api import sym_assert
 from schema_mechanism.func_api import sym_schema
 from schema_mechanism.func_api import sym_state
 from schema_mechanism.func_api import sym_state_assert
@@ -408,10 +407,10 @@ class TestController(TestShared):
         controller_map.clear()
 
         controllers: dict = {
-            'A': CompositeAction(goal_state=sym_assert('A')).controller,
-            'A,B,C': CompositeAction(goal_state=sym_assert('A,B,C')).controller,
-            'X': CompositeAction(goal_state=sym_assert('X')).controller,
-            'X,Y,Z': CompositeAction(goal_state=sym_assert('X,Y,Z')).controller,
+            'A': CompositeAction(goal_state=sym_state_assert('A')).controller,
+            'A,B,C': CompositeAction(goal_state=sym_state_assert('A,B,C')).controller,
+            'X': CompositeAction(goal_state=sym_state_assert('X')).controller,
+            'X,Y,Z': CompositeAction(goal_state=sym_state_assert('X,Y,Z')).controller,
         }
 
         all_controllers: set = {controller for controller in controllers.values()}

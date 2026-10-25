@@ -4,6 +4,7 @@ from collections import Counter
 from examples.multi_arm_bandits import BanditEnvironment
 from examples.multi_arm_bandits import Machine
 from schema_mechanism.core import Action
+from schema_mechanism.core import State
 from schema_mechanism.func_api import sym_state
 from test_share.test_func import common_test_setup
 
@@ -105,19 +106,38 @@ class TestMultiArmedBandits(unittest.TestCase):
         state, _ = env.step(Action('stand'))
         self.assertEqual(sym_state('S'), state)
 
+    def assert_no_op(self, env: BanditEnvironment, action: Action, expected_state: State) -> None:
+        """ Asserts that the action leaves the state unchanged and doesn't affect winnings or play statistics. """
+
+        def play_stats() -> tuple:
+            summary = env.episode_summary
+            return summary.winnings, summary.times_won, summary.times_played, Counter(summary.machines_played)
+
+        stats_before = play_stats()
+        state, _ = env.step(action)
+
+        self.assertEqual(expected_state, state)
+        self.assertEqual(stats_before, play_stats())
+
     def test_step_5(self):
-        # test: all actions other than sit SHOULD result in NO CHANGE in current state
+        # test: all actions other than sit SHOULD result in NO CHANGE in current state or winnings/play stats
         env = BanditEnvironment(machines=[self.machine_always_win], init_state=sym_state('S'))
         for action in [Action(a_str) for a_str in ['deposit', 'stand', 'play']]:
-            state, _ = env.step(action)
-            self.assertEqual(sym_state('S'), state)
+            self.assert_no_op(env, action, expected_state=sym_state('S'))
 
     def test_step_6(self):
-        # test: all actions other than stand and deposit SHOULD result in NO CHANGE in current state
+        # test: all actions other than stand and deposit SHOULD result in NO CHANGE in current state or
+        #     : winnings/play stats
         env = BanditEnvironment(machines=[self.machine_always_win], init_state=sym_state('M0'))
         for action in [Action(a_str) for a_str in ['play', 'sit(M0)']]:
-            state, _ = env.step(action)
-            self.assertEqual(sym_state('M0'), state)
+            self.assert_no_op(env, action, expected_state=sym_state('M0'))
+
+    def test_step_paid_state_no_ops(self):
+        # test: from a paid state (M0,P), deposit and every sit action SHOULD result in NO CHANGE in current state or
+        #     : winnings/play stats (in particular, a repeated deposit must not charge again)
+        env = BanditEnvironment(machines=self.machines, init_state=sym_state('M0,P'))
+        for action in [Action(a_str) for a_str in ['deposit', 'deposit', *[f'sit(M{m.id})' for m in self.machines]]]:
+            self.assert_no_op(env, action, expected_state=sym_state('M0,P'))
 
     def test_step_7(self):
         # test: all actions other than stand and deposit should result in M0 from lose (W) state
@@ -154,5 +174,3 @@ class TestMultiArmedBandits(unittest.TestCase):
         winnings_after_play = env.episode_summary.winnings
 
         self.assertEqual(winnings_before_play + currency_on_win, winnings_after_play)
-
-    # TODO: test for invalid moves that return to the same state

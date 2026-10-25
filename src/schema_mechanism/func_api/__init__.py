@@ -53,12 +53,6 @@ def sym_items(str_repr: str, primitive_values: Collection[float] = None, **kwarg
     return [sym_item(source, **kwargs) for source in sources]
 
 
-# TODO: this can eventually be removed. It is kept as an alias for sym_state_assert while I deal with this massive
-# TODO: redesign.
-def sym_assert(str_repr: str, **kwargs) -> StateAssertion:
-    return sym_state_assert(str_repr, **kwargs)
-
-
 def sym_state_assert(str_repr: str, **kwargs) -> StateAssertion:
     try:
         obj = parse(str_repr, **kwargs)

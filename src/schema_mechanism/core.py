@@ -961,9 +961,14 @@ class StateAssertion(UniqueIdMixin):
     def __hash__(self) -> int:
         return hash(self._items)
 
-    # TODO: can this be replace by using the fact that this class is iterable???
     @property
     def items(self) -> frozenset[Item]:
+        """ Returns this assertion's items as an immutable set.
+
+        This is a convenience view: the assertion itself is also iterable and supports `len` and `in`.
+
+        :return: a frozenset of the asserted items
+        """
         return self._items
 
     def union(self, items: Collection[Item, ...]) -> StateAssertion:
@@ -2453,17 +2458,6 @@ def find_nodes_matching_assertion(assertion: StateAssertion,
             partial_matches[items_matched].extend([child])
 
     return partial_matches
-
-
-# TODO: should this be added into the existing ADD method for SchemaTree?
-def add_bare_schema_to_tree(tree: SchemaTree, schema: Schema) -> SchemaTreeNode:
-    node: SchemaTreeNode = tree.lookup_node(schema.result)
-    if node:
-        node.schemas_would_satisfy += (schema,)
-    else:
-        node = generate_nodes_for_assertion(tree=tree, assertion=schema.result)
-        node.schemas_would_satisfy.add(schema)
-    return node
 
 
 class ItemPool(metaclass=Singleton):
