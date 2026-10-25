@@ -7,6 +7,7 @@ from schema_mechanism.core import Item
 from schema_mechanism.core import ItemPool
 from schema_mechanism.core import composite_items
 from schema_mechanism.core import held_state
+from schema_mechanism.core import items_on
 from schema_mechanism.core import lost_state
 from schema_mechanism.core import new_state
 from schema_mechanism.core import non_composite_items
@@ -89,6 +90,18 @@ class TestStateFunctions(TestCase):
         self.ci1: Item = self.pool.get(sym_state('1,2,3'), item_type=CompositeItem)  # On in s_1
         self.ci2: Item = self.pool.get(sym_state('4,5'), item_type=CompositeItem)  # On in s_1 and s_2
         self.ci3: Item = self.pool.get(sym_state('6,7,8'), item_type=CompositeItem)  # On in s_2
+
+    def test_items_on(self):
+        # test: SHOULD return every pool item (including composite items) that is On, in item-pool order
+        #     : (non-composite items in creation order, then composite items)
+        self.assertListEqual([*sym_items('1;2;3;4;5'), self.ci1, self.ci2], items_on(self.s_1))
+        self.assertListEqual([*sym_items('4;5;6;7;8'), self.ci2, self.ci3], items_on(self.s_2))
+
+        # test: the candidate items SHOULD be restrictable (e.g., to non-composite items only)
+        self.assertListEqual(list(sym_items('1;2;3;4;5')), items_on(self.s_1, items=self.pool.items))
+
+        # test: no items SHOULD be On in an empty state
+        self.assertListEqual([], items_on(self.s_empty))
 
     def test_all_state_functions_with_both_arguments_empty_or_none(self):
         # tests for empty or None states

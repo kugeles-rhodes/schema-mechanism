@@ -9,6 +9,7 @@ from unittest.mock import patch
 import numpy as np
 
 import test_share
+from schema_mechanism.core import CompositeItem
 from schema_mechanism.core import ECItemStats
 from schema_mechanism.core import ExtendedContext
 from schema_mechanism.core import FROZEN_EC_ITEM_STATS
@@ -18,6 +19,7 @@ from schema_mechanism.core import SchemaSpinOffType
 from schema_mechanism.core import SupportedFeature
 from schema_mechanism.core import SymbolicItem
 from schema_mechanism.core import get_global_params
+from schema_mechanism.core import items_on
 from schema_mechanism.func_api import sym_item
 from schema_mechanism.func_api import sym_items
 from schema_mechanism.func_api import sym_state
@@ -211,6 +213,30 @@ class TestExtendedContext(TestCase):
         # test: 2 pending items (items 1 and 2) should be relevant items in extended context
         self.assertEqual(2, len(self.ec.relevant_items))
         self.assertSetEqual(set(sym_items('1;2')), self.ec.relevant_items)
+
+    def test_update_all_with_pre_computed_active_items(self):
+        # a composite item in the pool; extended contexts only track non-composite items, so both must ignore it
+        _ = self.pool.get(sym_state('1,2'), item_type=CompositeItem)
+
+        ec_testing_items = ExtendedContext(suppressed_items=self.context.items)
+        ec_using_active_items = ExtendedContext(suppressed_items=self.context.items)
+
+        for i in range(100):
+            selection_state = sym_state(','.join(str(j) for j in range(20) if (i * 7 + j * 3) % 5 < 2))
+            success = i % 3 != 0
+
+            ec_testing_items.update_all(selection_state=selection_state, success=success)
+            ec_using_active_items.update_all(
+                selection_state=selection_state,
+                success=success,
+                active_items=frozenset(items_on(selection_state, items=self.pool.items))
+            )
+
+            # test: passing the pre-computed On items SHOULD produce exactly the same item statistics and relevant items
+            self.assertEqual(ec_testing_items, ec_using_active_items)
+
+        # sanity check: the sequence produced relevant items, so spin-off related state was compared too
+        self.assertTrue(ec_testing_items.relevant_items)
 
     def test_update_all_without_ec_defer_to_more_specific(self):
         params = get_global_params()
@@ -484,7 +510,7 @@ class TestExtendedContext(TestCase):
         self.assertTrue(i1_stats.negative_correlation_stat <= neg_threshold)
 
         self.assertEqual(1, len(self.ec.pending_relevant_items))
-        self.ec.check_pending_relevant_items()
+        self.ec.flush_pending_relevant_items()
         self.assertEqual(0, len(self.ec.pending_relevant_items))
 
         # verify only one relevant item
@@ -498,7 +524,7 @@ class TestExtendedContext(TestCase):
         self.ec.update(i2, on=False, success=False)
 
         self.assertEqual(1, len(self.ec.pending_relevant_items))
-        self.ec.check_pending_relevant_items()
+        self.ec.flush_pending_relevant_items()
         self.assertEqual(0, len(self.ec.pending_relevant_items))
 
         self.assertEqual(2, len(self.ec.relevant_items))

@@ -142,6 +142,22 @@ def lost_state(s_prev: Optional[State], s_curr: Optional[State]) -> frozenset[It
     return frozenset(lost)
 
 
+def items_on(state: State, items: Optional[Iterable[Item]] = None, **kwargs) -> list[Item]:
+    """ Returns the items that are On in the given state.
+
+    Note: this scans every candidate item, so callers that need the result repeatedly within a step should compute it
+    once and reuse it. Items created later (e.g., composite items created by spin-offs) are not included.
+
+    :param state: the state in which items are tested
+    :param items: the candidate items (defaults to every item in the item pool, including composite items)
+    :param kwargs: optional keyword arguments passed to Item.is_on
+
+    :return: a list of the items that are On, in the candidates' iteration order
+    """
+    items = ReadOnlyItemPool() if items is None else items
+    return [item for item in items if item.is_on(state=state, **kwargs)]
+
+
 class DelegatedValueHelper(ABC):
     """ An abstract base class for helper classes that track and derive an Item's delegated value.
 
@@ -166,7 +182,7 @@ class DelegatedValueHelper(ABC):
         """
 
     @abstractmethod
-    def update(self, selection_state: State, result_state: State, **kwargs) -> None:
+    def update(self, active_items: Collection[Item], target: float) -> None:
         """ Updates the item's delegated value.
 
         Delegated value should only be updated when states of non-zero value are encountered following the inclusion
@@ -175,11 +191,20 @@ class DelegatedValueHelper(ABC):
         states. In other words, an item's delegated value may be updated even if there are many intermediate states
         between a selection state in which the tracked item was On and a value-bearing result state.
 
-        :param selection_state: the most recent selection state.
-        :param result_state: the state immediately following the selection state.
-        :param kwargs: a dictionary of optional keyword arguments
+        :param active_items: the items that were On in the most recent selection state (see items_on)
+        :param target: the value accessible from the result state that followed it (see effective_state_value)
 
         :return: None
+        """
+
+    @abstractmethod
+    def effective_state_value(self, selection_state: State, result_state: State) -> float:
+        """ Calculates the value accessible from the result state, which is the target of a delegated-value update.
+
+        :param selection_state: the most recent selection state.
+        :param result_state: the state immediately following the selection state.
+
+        :return: the effective value of the result state
         """
 
     @abstractmethod
@@ -285,30 +310,17 @@ class EligibilityTraceDelegatedValueHelper(DelegatedValueHelper):
         index = self._delegated_values.indexes([item], add_missing=True)[0]
         self._delegated_values.values[index] = value
 
-    # TODO: the determination of active items from states should be removed from this method
-    # TODO:    * remove selection_state and result_state parameters
-    # TODO:    * add active_items parameter
-    # TODO: externalize effective_state_value calculation and pass that value in as a parameter?
-    def update(self,
-               selection_state: State,
-               result_state: State,
-               **kwargs) -> None:
-        """ Updates delegated-value-related statistics based on the selection and result states.
+    def update(self, active_items: Collection[Item], target: float) -> None:
+        """ Updates delegated-value-related statistics.
 
-        :param selection_state: the state from which the last schema was selected (i.e., an action taken)
-        :param result_state: the state that immediately followed the provided selection state
-        :param kwargs: optional keyword arguments
+        :param active_items: the items that were On in the most recent selection state (see items_on); these items'
+            eligibility traces are increased
+        :param target: the value accessible from the result state that followed it (see effective_state_value)
+
         :return: None
         """
-
-        # FIXME: this is horribly inefficient. Must find a better way.
-        active_items = [item for item in ReadOnlyItemPool() if item.is_on(state=selection_state, **kwargs)]
-
         # updating eligibility trace (decay all items, increase active items)
         self.eligibility_trace.update(active_items)
-
-        # the value accessible from the current state
-        target = self.effective_state_value(selection_state, result_state)
 
         # incremental update of delegated values towards target
         params = get_global_params()
@@ -492,10 +504,9 @@ class GlobalStats:
     n: int = 0
     baseline_value: float = 0.0
 
-    def update(self, selection_state: State, result_state: State) -> None:
-        """ Updates the global statistics based on the selection and result states.
+    def update(self, result_state: State) -> None:
+        """ Updates the global statistics based on the result state of the last selection event.
 
-        :param selection_state: the selection state from the last selection event
         :param result_state: the result state from the last selection event
 
         :return: None
@@ -1288,16 +1299,31 @@ class ExtendedContext(ExtendedItemCollection):
                 and should_freeze_item_stats):
             self._stats[item] = FROZEN_EC_ITEM_STATS
 
-    def update_all(self, selection_state: State, success: bool, count: int = 1) -> None:
+    def update_all(self,
+                   selection_state: State,
+                   success: bool,
+                   count: int = 1,
+                   active_items: Optional[Collection[Item]] = None) -> None:
+        """ Updates the extended context's item statistics based on the items that are On in the selection state.
+
+        :param selection_state: the state on which the most recent schema selection was based
+        :param success: True if the schema succeeded on activation; False otherwise
+        :param count: the number of updates to perform
+        :param active_items: an optional, pre-computed set of the items that are On in the selection state; when given,
+            it replaces testing every item against the selection state (use a set for fast membership tests)
+
+        :return: None
+        """
         # bypass updates when a more specific spinoff schema exists
         if (is_feature_enabled(SupportedFeature.EC_DEFER_TO_MORE_SPECIFIC_SCHEMA)
                 and self.defer_update_to_spin_offs(selection_state)):
             return
 
         for item in ItemPool().items:
-            self.update(item=item, on=item.is_on(selection_state), success=success, count=count)
+            on = item.is_on(selection_state) if active_items is None else item in active_items
+            self.update(item=item, on=on, success=success, count=count)
 
-        self.check_pending_relevant_items()
+        self.flush_pending_relevant_items()
 
         if self.new_relevant_items:
             self.notify_all(spin_off_type=SchemaSpinOffType.CONTEXT)
@@ -1326,8 +1352,11 @@ class ExtendedContext(ExtendedItemCollection):
     def pending_max_specificity(self) -> float:
         return self._pending_max_specificity
 
-    # TODO: Rename this method. It is not a check, but more of a flush of the pending items to the super class.
-    def check_pending_relevant_items(self) -> None:
+    def flush_pending_relevant_items(self) -> None:
+        """ Moves the pending relevant items into this extended context's relevant items and clears the pending set.
+
+        :return: None
+        """
         for item in self._pending_relevant_items:
             self.update_relevant_items(item=item)
 
@@ -1953,7 +1982,8 @@ class Schema(Observer, Observable, UniqueIdMixin):
                lost: Collection[Item] = None,
                explained: Optional[bool] = None,
                duration: float = 1.0,
-               count=1) -> None:
+               count=1,
+               active_items: Optional[Collection[Item]] = None) -> None:
         """
 
             Note: As a result of these updates, one or more notifications may be generated by the schema's
@@ -1967,6 +1997,8 @@ class Schema(Observer, Observable, UniqueIdMixin):
         :param explained: True if a reliable schema was activated that "explained" the last state transition
         :param duration: the elapsed time between the schema's selection and its completion
         :param count: the number of updates to perform
+        :param active_items: an optional, pre-computed set of the items that are On in the selection state (passed to
+            the extended context to avoid testing every item against the selection state again)
 
         :return: None
         """
@@ -1990,7 +2022,8 @@ class Schema(Observer, Observable, UniqueIdMixin):
             logger.debug(f'update suppressed for schema {self} because it is reliable')
         else:
             if all((self._extended_context, activated, selection_state)):
-                self._extended_context.update_all(selection_state=selection_state, success=succeeded, count=count)
+                self._extended_context.update_all(selection_state=selection_state, success=succeeded, count=count,
+                                                  active_items=active_items)
 
     def receive(self, source: ExtendedItemCollection, spin_off_type: SchemaSpinOffType, **kwargs) -> None:
         """ Supports the Schema class's implementation of the observer pattern.

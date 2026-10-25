@@ -7,10 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from schema_mechanism.core import ControllerMap
+from schema_mechanism.core import DelegatedValueHelper
 from schema_mechanism.core import ItemPool
 from schema_mechanism.core import SchemaPool
+from schema_mechanism.core import State
 from schema_mechanism.core import default_global_params
 from schema_mechanism.core import get_controller_map
+from schema_mechanism.core import items_on
 from schema_mechanism.core import set_global_params
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,21 @@ def common_test_setup():
     # resets the composite action controller
     controller_map: ControllerMap = get_controller_map()
     controller_map.clear()
+
+
+def update_delegated_value_helper(dv_helper: DelegatedValueHelper, selection_state: State, result_state: State) -> None:
+    """ Updates a delegated value helper for one selection/result step, as SchemaMechanism does at the end of a step.
+
+    :param dv_helper: the delegated value helper to update
+    :param selection_state: the most recent selection state
+    :param result_state: the state immediately following the selection state
+
+    :return: None
+    """
+    dv_helper.update(
+        active_items=items_on(selection_state),
+        target=dv_helper.effective_state_value(selection_state, result_state)
+    )
 
 
 def is_eq_reflexive(x: Any) -> bool:
