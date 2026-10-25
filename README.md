@@ -172,6 +172,9 @@ requests a stop. This listener needs OS-level input access, which differs by pla
 The run itself proceeds normally on all three platforms whether or not the listener can read key presses; only the
 pause and stop keys are affected.
 
+One listener is shared by all episodes in a run. For non-interactive runs, pass `--no_keyboard` to skip the listener
+entirely. It's skipped automatically with `--optimize`, and the experiment sweep passes `--no_keyboard` to every run.
+
 ### Experiment sweep
 
 `scripts/run_bandit_experiment.py` sweeps a range of machine-count configurations, running the single-run script

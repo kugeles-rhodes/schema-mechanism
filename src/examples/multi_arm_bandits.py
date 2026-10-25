@@ -16,6 +16,7 @@ from examples import EpisodeSummary
 from examples import RANDOM_SEED
 from examples import Runner
 from examples import SaveCallback
+from examples import configure_keyboard_control
 from examples import display_item_values
 from examples import display_known_schemas
 from examples import display_schema_memory
@@ -436,6 +437,9 @@ def main():
     logging.config.fileConfig('config/logging.conf')
 
     args = parse_args()
+
+    # pause/stop keys are only useful in interactive runs (disabled by --optimize and --no_keyboard)
+    configure_keyboard_control(args)
 
     load_path: Path = args.load_path
     save_path: Path = args.save_path

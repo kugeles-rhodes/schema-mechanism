@@ -11,6 +11,7 @@ from typing import Optional
 from examples import RANDOM_SEED
 from examples import Runner
 from examples import SaveCallback
+from examples import configure_keyboard_control
 from examples import default_display_on_step
 from examples import parse_optimizer_args
 from examples import parse_run_args
@@ -204,6 +205,9 @@ def main():
 
     # parse command line arguments
     args = parse_args()
+
+    # pause/stop keys are only useful in interactive runs (disabled by --optimize and --no_keyboard)
+    configure_keyboard_control(args)
 
     load_path: Path = args.load_path
     save_path: Path = args.save_path
