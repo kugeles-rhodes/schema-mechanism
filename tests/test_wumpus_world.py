@@ -5,8 +5,6 @@ test with guidance to verify distinct current-cell and forward-cell labels.
 These cover selected deterministic cases, not learning performance or all
 world layouts.
 
-Run from the repository root:
-    venv/bin/python -B -m unittest discover -s tests -p 'test_wumpus_world.py' -v
 """
 
 import unittest

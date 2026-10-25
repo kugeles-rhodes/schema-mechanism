@@ -9,32 +9,34 @@ on:
 
 jobs:
   unittest:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # keep in sync with python_requires and the classifiers in setup.py
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # keep in sync with requires-python and the classifiers in pyproject.toml
         python-version: ['3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      # python-version sets UV_PYTHON, which overrides .python-version; uv downloads that Python if needed
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
+          version: '0.12.18'
           python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            setup.py
+          enable-cache: true
 
-      # requirements.txt is a full lock (incl. transitive deps); on Linux, pynput's evdev dependency is compiled from
-      # source, which works with the compiler and kernel headers preinstalled on GitHub's Ubuntu runners
+      # --locked fails if uv.lock is out of date with pyproject.toml. On Linux, pynput's evdev dependency is compiled
+      # from source, which works with the compiler and headers preinstalled on GitHub's Ubuntu runners.
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e .
+        run: uv sync --locked
 
       # examples/__init__.py imports pynput.keyboard, which needs an X display on Linux, so the
       # tests that import `examples` are run under a virtual framebuffer.
+      - name: Run unit tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a uv run --locked python -m unittest discover -s tests -v
+
       - name: Run unit tests
-        run: xvfb-run -a python -m unittest discover -s tests -v
+        if: runner.os != 'Linux'
+        run: uv run --locked python -m unittest discover -s tests -v
