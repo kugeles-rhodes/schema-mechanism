@@ -736,10 +736,9 @@ class SchemaMechanism:
 
     def learn(self, selection_details: SelectionDetails, result_state: State, **_kwargs) -> None:
         self.schema_memory.update_all(selection_details=selection_details, result_state=result_state)
-        self.update(result_state, selection_details)
+        self._update(result_state, selection_details)
 
-    # TODO: this can be made private
-    def update(self, result_state, selection_details):
+    def _update(self, result_state, selection_details):
         selected_schema = selection_details.selected
         selection_state = selection_details.selection_state
         terminated_pending_details = selection_details.terminated_pending
